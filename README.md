@@ -83,13 +83,13 @@ Both options still need the dataset step below — **that's not optional
 either way**, and it's the single most common place a first run will fail
 if skipped.
 
-> **Docker disclosure:** the Dockerfiles and `docker-compose.yml` in this
-> repo were written and manually reviewed line-by-line, but **could not be
-> executed in the environment this project was built in (no Docker
-> available there)**. Please treat `docker compose up --build` as
-> reviewed-but-not-CI-verified until you've run it once yourself. If
-> something doesn't come up cleanly, the manual (Option B) path is fully
-> equivalent and has been run and verified directly, repeatedly, throughout
+> **Docker status:** `docker compose up --build` has been run and verified
+> end-to-end from a clean state (both containers healthy, frontend calling
+> backend across published ports with no CORS errors, a real `/predict`
+> call returning a real SHAP explanation, and SQLite data confirmed to
+> survive a `docker compose down` / `up` cycle). If it still doesn't come up
+> cleanly on your machine, the manual (Option B) path is fully equivalent
+> and has been run and verified directly, repeatedly, throughout
 > development.
 
 ## Environment variables
@@ -238,13 +238,16 @@ A suggested tour, roughly in the order a judge would want to see the story:
    Now run:
 
    ```bash
-   python simulator/simulate.py --spike --spike-size 5
+   python simulator/simulate.py --spike --spike-size 10
    ```
 
    Leave the Fraud Spike page open while this runs — it auto-polls every 3s
    and will flip to an active-spike banner (severity-colored, with an
    anomaly z-score and a persisted alert-history entry) **without a manual
-   refresh**.
+   refresh**. (`--spike-size 10`, not the smaller default: the burst always
+   targets the same highest-probability rows, so a rehearsed-more-than-once
+   demo needs headroom past whatever's already been claimed by
+   content-hash dedup or `seed_chargebacks.py` — see Known Limitations.)
 
 5. **Threshold Simulator** (`/threshold-simulator`) — drag the slider and
    watch precision/recall/expected-loss update in real time (sub-20ms
@@ -376,9 +379,17 @@ in place of another.
   `expected_financial_loss` on the Threshold Simulator page is similarly
   built on **placeholder** unit costs (false-positive cost 5, false-negative
   cost 100), not calibrated real currency figures.
-- **Docker setup is reviewed, not execution-verified** (see the Installation
-  disclosure above) — no Docker was available in the environment this
-  project was built in.
+- **Repeated `simulate.py --spike` runs eventually reuse the same rows.**
+  The spike burst always picks the highest-probability test-set rows, and
+  content-hash dedup (see above) means re-running it — or running it after
+  `seed_chargebacks.py`, which claims the top 3 for its own demo — returns
+  the *existing* prediction for any row already sent, with its original
+  timestamp. Enough reused (old-timestamped) rows in a burst can make the
+  rolling window fail to register a fresh spike on a repeat rehearsal. Use
+  `--spike-size 10` or higher (there are dozens of test rows at
+  effectively the same ~86% probability) rather than the minimum needed —
+  it costs nothing and leaves headroom for rehearsing the demo more than
+  once. See `docs/demo_script.md`.
 - **Single-machine SQLite, no auth, no rate limiting.** This is an
   intentional, stated hackathon-scope deferral, not an oversight — none of
   it was required by the brief, and adding it would have traded time away
