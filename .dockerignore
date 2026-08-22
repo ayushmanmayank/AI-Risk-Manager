@@ -1,0 +1,26 @@
+# Never let the licensed Kaggle dataset or the large regenerable
+# features file end up baked into an image layer, even by accident --
+# docker-compose.yml mounts the real data/ directory as a volume instead.
+data/raw/
+data/processed/
+data/predictions.db
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Frontend (each service's own Dockerfile copies only what it needs)
+frontend/node_modules/
+frontend/dist/
+
+# VCS / editor / misc
+.git/
+.gitignore
+.vscode/
+.idea/
+*.md
+docs/
+tests/

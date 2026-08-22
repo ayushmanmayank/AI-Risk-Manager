@@ -6,6 +6,7 @@ Run with:  uvicorn api.main:app --reload   (from the project root)
 from __future__ import annotations
 
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -46,19 +47,40 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Local-dev CORS only: Vite's default ports on localhost/127.0.0.1. This is
-# not the auth/rate-limiting deferral from Day 3 — the frontend cannot make
-# any cross-origin request at all without it. Tighten before any real deploy.
+# Local-dev / Docker-demo CORS only: not the auth/rate-limiting deferral
+# from Day 3 — the frontend cannot make any cross-origin request at all
+# without this. Tighten before any real deploy.
+#
+# Configurable via CORS_ORIGINS (comma-separated) because the frontend's
+# origin genuinely differs between `npm run dev` (Vite on :5173) and the
+# Dockerized frontend (nginx, published on :3000 by default -- see
+# docker-compose.yml and .env.example). The default list below covers
+# both out of the box so neither setup needs an env var to work.
+#
+# IMPORTANT (the actual common breakage point): these must be origins the
+# BROWSER sends as `Origin` — i.e. localhost + a PUBLISHED port — never a
+# Docker-internal service hostname like `http://backend:8000`. The browser
+# runs on the host machine, not inside the compose network, so a
+# container-only hostname would never match any real request's Origin
+# header and CORS would silently fail.
+_DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173,http://127.0.0.1:5173,"
+    "http://localhost:3000,http://127.0.0.1:3000"
+)
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ORIGINS", _DEFAULT_CORS_ORIGINS).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+logger.info("CORS allow_origins=%s", CORS_ORIGINS)
 
 
 @app.middleware("http")
