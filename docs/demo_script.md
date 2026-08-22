@@ -4,33 +4,44 @@ A literal, rehearsable walkthrough. Target: **4-5 minutes**. Timings are
 per-step targets, not hard stops — if you're mid-sentence when a timer
 would end, finish the sentence, not the clock.
 
-**Run this once before the room fills up, not during the demo** — and note
-the two steps below can leave the Fraud Spike detector showing "active,"
-which the last line fixes before you start:
+## ⚠️ STEP 0 — ALWAYS RUN THIS FIRST, NO EXCEPTIONS ⚠️
+
+**Every single time** you rehearse or present — fresh machine, mid-rehearsal,
+right before the real thing, doesn't matter — start here:
+
 ```bash
 docker compose up -d
-python src/evidence/seed_chargebacks.py
+python scripts/reset_demo_data.py
 ```
-If that second command exits with "Need at least one HIGH-risk and one
-LOW-risk prediction already stored" (a genuinely fresh DB has neither
-yet), it needs **both** — a spike burst alone only creates HIGH rows,
-which still isn't enough (verified live: tried exactly that, it still
-refused). Get some of each, then seed:
-```bash
-python simulator/simulate.py --count 5 --interval 0.1
-python simulator/simulate.py --count 0 --spike --spike-size 10
-python src/evidence/seed_chargebacks.py
-```
-**Either way, finish with this** — the spike burst above (or a leftover
-one from a previous rehearsal) leaves the detector showing "active," and
-you want the *first* spike the audience sees to be the one you trigger
-live in step 6, not a stale one from setup:
-```bash
-python simulator/simulate.py --count 50 --interval 0.1
-```
-Open `/fraud-spike` and confirm it actually reads **"No active spike"**
-(green) before the room fills up — don't assume it does. Leave the app
-running via Docker at `http://localhost:3000` the whole time.
+
+That's it. One command. It takes the system from **any** state (fresh,
+mid-demo, a HIGH-risk pool exhausted by a previous `--spike` run,
+partially seeded, whatever) to the same known-good starting point every
+time: a small amount of baseline traffic on the Dashboard, the seeded
+chargeback mix on Chargeback Center, the Fraud Spike detector reading calm
+("No active spike"), and — critically — the *entire* 40-row pool of
+HIGH-probability test rows freshly available again for the live `--spike`
+in step 6 (the reset only pre-claims 3 of those 40, for the chargeback
+seeding; see the script's own docstring for exactly why that number and
+no more). It takes about 11-15 seconds end to end — verified live,
+identically, from three different starting states including the fully
+exhausted pool.
+
+Confirm before moving on: open `/fraud-spike` and check it actually reads
+**"No active spike"** (green) — the script's own output tells you this too
+(`Spike detector calm after reset: True`), but look at the page anyway,
+don't just trust the terminal. Leave the app running via Docker at
+`http://localhost:3000` the whole time.
+
+If the script exits with "Backend not reachable," `docker compose up -d`
+either hasn't finished yet or the containers aren't healthy — check
+`docker compose ps` before retrying.
+
+*(The manual multi-step version of this setup — running `simulate.py` and
+`seed_chargebacks.py` by hand, resetting via `rm data/predictions.db` when
+the HIGH pool ran out — is retired. `scripts/reset_demo_data.py` does all
+of that correctly, every time, including the case that manual version
+couldn't recover from.)*
 
 ---
 
@@ -118,24 +129,20 @@ before the burst even starts.
 
 **Read this before rehearsing more than once.** The burst always targets
 the same fixed, deterministically-ranked highest-probability rows, and
-content-hash dedup means any of them already sent this session (pre-show
-setup, or an earlier rehearsal) come back as the *existing* row with its
-*old* timestamp, which the rolling window won't count as recent. This is
-**not a "use a bigger number" problem** — the entire test split has only
-**40 rows** above the HIGH-risk threshold, period. There is no
-`--spike-size` above that helps once they're all claimed; a full
-rehearsal-heavy audit session confirmed this directly (`--spike-size 40`
-consumed the entire pool; a following `--spike-size 30` then failed
-completely). **The only reliable reset is a fresh database:**
+content-hash dedup means any of them already sent this session come back
+as the *existing* row with its *old* timestamp, which the rolling window
+won't count as recent. The entire test split has only **40 rows** above
+the HIGH-risk threshold, period — no `--spike-size` above that helps once
+they're all claimed. This is exactly what STEP 0 above exists to fix:
+rerun it between rehearsals —
 ```bash
-docker compose down
-rm data/predictions.db   # or: del data\predictions.db  on plain cmd.exe
-docker compose up -d
+python scripts/reset_demo_data.py
 ```
-then redo the pre-show setup above. Do this once, right before the actual
-presentation, after you're done rehearsing — not between every rehearsal
-(each reset also erases the seeded chargebacks and everything on the
-Dashboard, so you'd redo more than just this step).
+— and the full 40-row pool is fresh again (it only pre-claims 3, for the
+Chargeback Center seeding), in ~11-15 seconds, without erasing anything
+you actually need for the rest of the demo — you'll land back on the same
+seeded chargeback mix and calm dashboard every time. Do this between every
+rehearsal, not just once before the real thing.
 
 **Say (while it runs):** "This is bursting real high-probability
 transactions from the test set — again, genuinely held-out data, not
@@ -206,25 +213,22 @@ frontend.
 
 **`--spike` doesn't visibly trigger:** the burst always targets the same
 fixed, deterministically-ranked highest-probability rows; if they've
-already been sent this session (including by `seed_chargebacks.py`'s
-setup, or an earlier rehearsal of step 6), content-hash dedup returns the
-existing row with its *old* timestamp, and the rolling window won't count
-it as recent. This is not hypothetical — confirmed live during a
-rehearsal-heavy audit: a second consecutive run at `--spike-size 10`
-failed, and after enough further testing, **the entire 40-row pool of
-HIGH-probability test rows was exhausted and `--spike-size 30` failed
-completely too.** There is no larger number that fixes this once the pool
-is used up — it's a hard ceiling (40 rows total ≥ the HIGH threshold in
-the whole test split), not a "try bigger" problem. The only reliable fix
-is a fresh database:
+already been sent this session, content-hash dedup returns the existing
+row with its *old* timestamp, and the rolling window won't count it as
+recent. The entire test split has only **40 rows** at or above the
+HIGH-risk threshold, period — a hard ceiling, not a "try a bigger
+`--spike-size`" problem. Fix:
 ```bash
-docker compose down
-rm data/predictions.db
-docker compose up -d
+python scripts/reset_demo_data.py
 ```
-then redo the pre-show setup from the top. Don't reset between every
-rehearsal (it also erases the seeded chargebacks) — reset once,
-immediately before the real presentation, after rehearsing.
+This clears stored predictions (which is what dedup actually tracks —
+`data/processed/features.csv`, the 40-row pool itself, is never written to
+by anything in this system, so it was never actually "used up," only its
+bookkeeping in the predictions table was), reseeds the baseline traffic
+and chargeback mix, and leaves the spike detector calm — verified to
+recover identically whether run against a fresh DB, a mid-demo DB, or a
+DB where this exact exhaustion just happened. Takes ~11-15 seconds; safe
+to run between every rehearsal, not just once before the real thing.
 
 **Total meltdown — fall back to screenshots:** Day 10's cross-page
 screenshot pass captured all 6 pages then-current; grab a fresh set the

@@ -33,7 +33,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from sqlalchemy import select  # noqa: E402
 
-from api.services.db import SessionLocal, init_db  # noqa: E402
+import api.services.db as db_module  # noqa: E402
 from api.services.db_models import ChargebackRecord, PredictionRecord, RefundRecord  # noqa: E402
 
 HIGH_RISK_REASON = "unauthorized_transaction"
@@ -42,8 +42,8 @@ EXTRA_REASON = "product_not_received"
 
 
 def seed(reset: bool = False) -> None:
-    init_db()
-    db = SessionLocal()
+    db_module.init_db()
+    db = db_module.SessionLocal()
     try:
         if reset:
             deleted_cb = db.query(ChargebackRecord).delete()

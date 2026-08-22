@@ -210,12 +210,26 @@ npm run dev
 
 ## Demo walkthrough
 
-A suggested tour, roughly in the order a judge would want to see the story:
+A suggested tour, roughly in the order a judge would want to see the story.
+
+**Step 0, every time, before anything else:**
+
+```bash
+python scripts/reset_demo_data.py
+```
+
+One command, ~11-15s, takes the system from *any* state (fresh, mid-demo,
+a previous `--spike` run having exhausted the HIGH-risk row pool used in
+step 4 below, whatever) to a known-good starting point: a small amount of
+baseline traffic already on the Dashboard, the seeded chargeback mix ready
+for step 7, the Fraud Spike detector reading calm, and the full HIGH-risk
+row pool fresh again for step 4. See `docs/demo_script.md` for the full
+rehearsed script this backs; see the script's own docstring for exactly
+what it does and why.
 
 1. **Dashboard** (`/`) — total transactions scored so far, risk-tier
-   distribution, decision breakdown. Empty at first; that's expected and
-   handled explicitly (a calm "no predictions yet" state, not a blank
-   screen) — populate it with step 2.
+   distribution, decision breakdown. Already has a small amount of
+   baseline traffic from step 0 — populate it further with step 2.
 
 2. **Generate live traffic.** In a separate terminal:
 
@@ -245,11 +259,12 @@ A suggested tour, roughly in the order a judge would want to see the story:
    and will flip to an active-spike banner (severity-colored, with an
    anomaly z-score and a persisted alert-history entry) **without a manual
    refresh**. `--count 0` skips `simulate.py`'s default 12-transaction
-   normal warmup (dead air you don't want mid-demo). On a **fresh
-   database** this reliably triggers. On a **repeatedly rehearsed** one it
-   can stop working entirely, with no `--spike-size` that fixes it — see
-   Known Limitations below, this is a hard ceiling, not a "use a bigger
-   number" problem.
+   normal warmup (dead air you don't want mid-demo). The entire test split
+   has only 40 rows at or above the HIGH-risk threshold, and content-hash
+   dedup means a repeatedly rehearsed session can exhaust that pool with no
+   `--spike-size` that fixes it — see Known Limitations below. Rerun
+   `python scripts/reset_demo_data.py` (step 0) between rehearsals to
+   restore the full pool; no need to touch the database file directly.
 
 5. **Threshold Simulator** (`/threshold-simulator`) — drag the slider and
    watch precision/recall/expected-loss update in real time (sub-20ms
@@ -262,15 +277,12 @@ A suggested tour, roughly in the order a judge would want to see the story:
    held-out **test**-set numbers (not validation, not demo traffic — see
    the page's own explicit labeling and [§9](#model-performance-real-audited-test-set-numbers)).
 
-7. **Chargeback Center** (`/chargebacks`) — seed a handful of realistic,
-   clearly-labeled **simulated** chargebacks against the real predictions
-   already scored:
-
-   ```bash
-   python src/evidence/seed_chargebacks.py
-   ```
-
-   Click into a "Flagged in advance" case (the model already held it before
+7. **Chargeback Center** (`/chargebacks`) — the seeded mix of realistic,
+   clearly-labeled **simulated** chargebacks against real predictions is
+   already in place from step 0. (`python src/evidence/seed_chargebacks.py`
+   can be run standalone too, but it needs at least one HIGH-risk and one
+   LOW-risk prediction already stored to seed against — step 0 guarantees
+   that.) Click into a "Flagged in advance" case (the model already held it before
    the chargeback), then a "Not flagged" case (the honest missed-fraud
    story) — both evidence timelines are assembled entirely from real
    database records, with any genuinely unavailable field (there is no
@@ -383,23 +395,26 @@ in place of another.
   cost 100), not calibrated real currency figures.
 - **Repeated `simulate.py --spike` runs eventually reuse the same rows.**
   The spike burst always picks the highest-probability test-set rows, and
-  content-hash dedup (see above) means re-running it — or running it after
-  `seed_chargebacks.py`, which claims the top 3 for its own demo — returns
-  the *existing* prediction for any row already sent, with its original
-  timestamp. Enough reused (old-timestamped) rows in a burst can make the
-  rolling window fail to register a fresh spike on a repeat rehearsal --
-  and this has a **hard ceiling, not a "use a bigger `--spike-size`"
-  workaround**: the entire test split has only **40 rows** at or above
-  the HIGH-risk threshold. A rehearsal-heavy audit session confirmed this
-  directly and live -- `--spike-size 10` failed on a second consecutive
-  run, and continued testing exhausted the full 40-row pool, at which
-  point `--spike-size 30` failed completely too. `--count 0` (skips an
-  unrelated 12-row normal-traffic warmup) plus a generous `--spike-size`
-  is fine for a small number of rehearsals, but the only *reliable* fix
-  once rows are claimed is resetting the database (`docker compose down`,
-  delete `data/predictions.db`, `docker compose up`, redo the pre-show
-  setup) -- do this once, right before the real presentation, not between
-  every rehearsal. See `docs/demo_script.md` for the full procedure.
+  content-hash dedup (see above) means re-running it returns the *existing*
+  prediction for any row already sent, with its original timestamp. Enough
+  reused (old-timestamped) rows in a burst can make the rolling window
+  fail to register a fresh spike on a repeat rehearsal -- and this has a
+  **hard ceiling, not a "use a bigger `--spike-size`" workaround**: the
+  entire test split has only **40 rows** at or above the HIGH-risk
+  threshold. A rehearsal-heavy audit session confirmed this directly and
+  live -- `--spike-size 10` failed on a second consecutive run, and
+  continued testing exhausted the full 40-row pool, at which point
+  `--spike-size 30` failed completely too. **Fixed by `scripts/reset_demo_data.py`**
+  (see the "Demo walkthrough" step 0 above): it clears the *stored*
+  predictions that dedup actually tracks -- `data/processed/features.csv`,
+  the 40-row pool itself, is never written to by anything in this system,
+  so it was never really "used up," only its bookkeeping in the
+  predictions table was -- and reseeds baseline traffic and chargebacks in
+  the same run. Verified live to reach an identical calm/seeded end state
+  whether run against a fresh DB, a mid-demo DB, or a DB where the pool
+  had just been fully exhausted; safe and fast (~11-15s) enough to run
+  before every rehearsal, not just once before the real thing. See
+  `docs/demo_script.md` for the full procedure.
 - **Single-machine SQLite, no auth, no rate limiting.** This is an
   intentional, stated hackathon-scope deferral, not an oversight — none of
   it was required by the brief, and adding it would have traded time away
