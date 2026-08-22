@@ -238,16 +238,18 @@ A suggested tour, roughly in the order a judge would want to see the story:
    Now run:
 
    ```bash
-   python simulator/simulate.py --spike --spike-size 10
+   python simulator/simulate.py --count 0 --spike --spike-size 30
    ```
 
    Leave the Fraud Spike page open while this runs — it auto-polls every 3s
    and will flip to an active-spike banner (severity-colored, with an
    anomaly z-score and a persisted alert-history entry) **without a manual
-   refresh**. (`--spike-size 10`, not the smaller default: the burst always
-   targets the same highest-probability rows, so a rehearsed-more-than-once
-   demo needs headroom past whatever's already been claimed by
-   content-hash dedup or `seed_chargebacks.py` — see Known Limitations.)
+   refresh**. `--count 0` skips `simulate.py`'s default 12-transaction
+   normal warmup (dead air you don't want mid-demo). On a **fresh
+   database** this reliably triggers. On a **repeatedly rehearsed** one it
+   can stop working entirely, with no `--spike-size` that fixes it — see
+   Known Limitations below, this is a hard ceiling, not a "use a bigger
+   number" problem.
 
 5. **Threshold Simulator** (`/threshold-simulator`) — drag the slider and
    watch precision/recall/expected-loss update in real time (sub-20ms
@@ -385,11 +387,19 @@ in place of another.
   `seed_chargebacks.py`, which claims the top 3 for its own demo — returns
   the *existing* prediction for any row already sent, with its original
   timestamp. Enough reused (old-timestamped) rows in a burst can make the
-  rolling window fail to register a fresh spike on a repeat rehearsal. Use
-  `--spike-size 10` or higher (there are dozens of test rows at
-  effectively the same ~86% probability) rather than the minimum needed —
-  it costs nothing and leaves headroom for rehearsing the demo more than
-  once. See `docs/demo_script.md`.
+  rolling window fail to register a fresh spike on a repeat rehearsal --
+  and this has a **hard ceiling, not a "use a bigger `--spike-size`"
+  workaround**: the entire test split has only **40 rows** at or above
+  the HIGH-risk threshold. A rehearsal-heavy audit session confirmed this
+  directly and live -- `--spike-size 10` failed on a second consecutive
+  run, and continued testing exhausted the full 40-row pool, at which
+  point `--spike-size 30` failed completely too. `--count 0` (skips an
+  unrelated 12-row normal-traffic warmup) plus a generous `--spike-size`
+  is fine for a small number of rehearsals, but the only *reliable* fix
+  once rows are claimed is resetting the database (`docker compose down`,
+  delete `data/predictions.db`, `docker compose up`, redo the pre-show
+  setup) -- do this once, right before the real presentation, not between
+  every rehearsal. See `docs/demo_script.md` for the full procedure.
 - **Single-machine SQLite, no auth, no rate limiting.** This is an
   intentional, stated hackathon-scope deferral, not an oversight — none of
   it was required by the brief, and adding it would have traded time away
