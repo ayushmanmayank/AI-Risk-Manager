@@ -5,8 +5,36 @@ import { EmptyBlock, ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { DecisionBadge, FlaggedInAdvanceBadge, RiskTierBadge } from '../components/Badge';
 import { StatCard } from '../components/StatCard';
 import { SEVERITY_COLOR } from '../theme/colors';
-import type { EvidencePackageOut, TimelineEventOut } from '../types/api';
+import type { AutoSummaryOut, EvidencePackageOut, TimelineEventOut } from '../types/api';
 import { formatAmount, formatProbability, formatTimestamp } from '../utils/format';
+
+/** Renders src/evidence/summarize_evidence.py's output -- a narrative
+ * built by fixed Python string templates from facts shown elsewhere on
+ * this page, NOT an LLM call. Labeled honestly as "Automated summary,"
+ * and never presented as additional evidence beyond the timeline/records
+ * below it. `available: false` is an expected, non-error state; the page
+ * must still be fully usable either way.
+ */
+function AutoSummaryBlock({ autoSummary }: { autoSummary: AutoSummaryOut }) {
+  if (!autoSummary.available || !autoSummary.text) {
+    return (
+      <div className="rounded-lg border border-dashed border-[#e1e0d9] bg-[#fcfcfb] p-4 text-xs text-[#898781]">
+        Automated summary unavailable right now -- see the evidence records below for the full picture.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-[#e1e0d9] bg-[#f7f6f2] p-4">
+      <div className="text-xs font-medium tracking-wide text-[#898781] uppercase">Automated summary</div>
+      <p className="mt-2 text-sm text-[#0b0b0b]">{autoSummary.text}</p>
+      <p className="mt-2 text-xs text-[#898781]">
+        Generated automatically by fixed rules from the records shown below -- not written by a person, and not
+        additional evidence beyond what's already on this page.
+      </p>
+    </div>
+  );
+}
 
 function TimelineRow({ event, isLast }: { event: TimelineEventOut; isLast: boolean }) {
   return (
@@ -54,6 +82,8 @@ export function ChargebackDetail() {
           Transaction: <span className="font-mono">{data.chargeback.transaction_id}</span>
         </p>
       </div>
+
+      <AutoSummaryBlock autoSummary={data.auto_summary} />
 
       <div className="rounded-lg border-2 p-6" style={{ borderColor: bannerColor, backgroundColor: `${bannerColor}0d` }}>
         <div className="flex flex-wrap items-center justify-between gap-4">

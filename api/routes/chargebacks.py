@@ -1,5 +1,9 @@
 """GET /api/v1/chargebacks and GET /api/v1/chargebacks/{id} -- chargeback
-evidence responder (Day 11).
+evidence responder (Day 11), with an automated narrative summary (Tier 1,
+feature/chargeback-llm-summary) layered on top of the detail response --
+see src/evidence/summarize_evidence.py. Despite the branch name, this is
+a pure Python template over already-assembled evidence fields, not an
+LLM call -- no external API, no API key.
 
 Chargeback/refund data is SEEDED/SIMULATED (see
 src/evidence/seed_chargebacks.py) -- there is no real chargeback history.
@@ -19,6 +23,7 @@ from api.schemas.prediction import PredictionOut
 from api.services.db import get_db
 from api.services.db_models import ChargebackRecord, PredictionRecord
 from api.services.evidence_service import get_evidence_package
+from src.evidence.summarize_evidence import generate_summary
 
 router = APIRouter()
 
@@ -62,6 +67,7 @@ def get_chargeback_evidence(chargeback_id: str, db: Session = Depends(get_db)) -
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"chargeback_id '{chargeback_id}' not found")
 
     transaction_out = PredictionOut.model_validate(package.transaction) if package.transaction else None
+    auto_summary = generate_summary(package)
 
     return EvidencePackageOut(
         chargeback={
@@ -85,6 +91,11 @@ def get_chargeback_evidence(chargeback_id: str, db: Session = Depends(get_db)) -
             "decision_at_scoring": package.summary.decision_at_scoring,
             "fraud_probability_at_scoring": package.summary.fraud_probability_at_scoring,
             "narrative": package.summary.narrative,
+        },
+        auto_summary={
+            "text": auto_summary.text,
+            "available": auto_summary.available,
+            "error": auto_summary.error,
         },
         data_model_note=DATA_MODEL_NOTE,
     )
