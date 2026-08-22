@@ -1,0 +1,15 @@
+pandas>=2.0
+scikit-learn>=1.3
+xgboost>=2.0
+shap>=0.44
+joblib>=1.3
+numpy>=1.24
+pytest>=7.0
+
+# API (Day 3+) and simulator (Day 6) -- installed since Day 3 but never
+# pinned here until now.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+httpx>=0.27
+pydantic>=2.5
