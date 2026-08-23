@@ -1,41 +1,98 @@
 @import "tailwindcss";
 
 /**
- * UI redesign (feature/ui-redesign) design tokens -- visual system only,
- * no app logic here. See src/theme/colors.ts for the JS-side mirror of
- * the same palette (used for chart/SVG props Tailwind classes can't reach).
+ * UI redesign (feature/ui-redesign), 2nd pass -- dark violet/glow
+ * refinement over the first pass's ink/brass palette. Visual system
+ * only, no app logic here. See src/theme/colors.ts for the JS-side
+ * mirror (chart/SVG props Tailwind classes can't reach).
  *
- * Palette reasoning (see the approved design plan): a real dark ink
- * background (not pure black), a muted brass accent chosen specifically
- * to avoid both the generic blue/purple SaaS default AND a "crypto gold"
- * cliché, and three risk-tier colors used identically everywhere they
- * appear (badges, charts, the Risk Meter). The accent is deliberately
- * the most desaturated color in the system so risk-tier colors always
- * visually dominate over UI chrome.
+ * Palette reasoning: a near-black base with a violet undertone (not
+ * pure black, not the first pass's neutral ink), a single confident
+ * violet accent reserved for UI SIGNAL only (nav active state, focus,
+ * links, the "live" indicator, the headline series in a 2-line chart)
+ * -- risk-tier colors (LOW/MEDIUM/HIGH) are UNCHANGED from the first
+ * pass and never become violet: violet means "look here / interact
+ * here," green/orange/red still exclusively mean "how risky is this."
+ * Keeping these two color systems separate is what stops the accent
+ * from diluting the one set of colors that actually has to be trusted.
  */
 @theme {
-  --color-bg-base: #0b0c0f;
-  --color-bg-surface: #16181d;
-  --color-bg-surface-raised: #1c1f26;
-  --color-border: #262931;
+  --color-bg-base: #0d0b14;
+  --color-bg-surface: #17141f;
+  --color-bg-surface-raised: #1e1a2b;
+  --color-border: rgba(167, 139, 250, 0.12);
 
   --color-text-primary: #edeef0;
-  --color-text-secondary: #9498a0;
-  --color-text-muted: #6b6f78;
+  --color-text-secondary: #9a94ac;
+  --color-text-muted: #6b6478;
 
-  --color-accent: #a68a5b;
+  --color-accent: #a78bfa;
+  /* Secondary line-chart series color -- deliberately NOT violet (so
+     violet keeps a single meaning per chart) and NOT a risk-tier color
+     (so a 2-series comparison chart never looks like it's encoding risk
+     severity). See PrecisionRecallCurveChart.tsx. */
+  --color-series-secondary: #7c8b9e;
 
   --color-risk-low: #3fa66b;
   --color-risk-medium: #db8a3f;
   --color-risk-high: #c75450;
 
-  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 
+/* Reusable card finish -- hairline violet-tinted border + a soft,
+   downward-only ambient shadow (NOT a bright bloom: kept to a low
+   opacity/tight spread on purpose, see the design plan's self-critique
+   on staying "serious tool," not "glowing consumer app"). 16px radius
+   for hero/content cards. */
+@utility card {
+  border-radius: 1rem;
+  background-color: var(--color-bg-surface);
+  /* Longhand, not the `border` shorthand -- so a page can still compose
+     e.g. `card border-dashed` and have Tailwind's border-style utility
+     win cleanly, instead of fighting a shorthand that also sets style. */
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--color-border);
+  box-shadow: 0 1px 24px -8px rgba(167, 139, 250, 0.18);
+}
+
+/* Same finish, tighter radius (12px) and tighter shadow -- for dense
+   table containers, which should read as structured/dense rather than
+   soft, even within the same visual system. */
+@utility card-dense {
+  border-radius: 0.75rem;
+  background-color: var(--color-bg-surface);
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--color-border);
+  box-shadow: 0 1px 16px -8px rgba(167, 139, 250, 0.14);
+}
+
+/* Glow for the "headline" series in a 2-line chart (see
+   PrecisionRecallCurveChart.tsx) -- applied via a CSS class rather than
+   Recharts' `style` prop: passing a `style` object directly to `<Line>`
+   was found to silently break the line's own rendering (confirmed live
+   -- the path kept valid geometry/color in the DOM but painted nothing),
+   almost certainly clobbering some internal style Recharts merges onto
+   the same path. A plain class-based rule sidesteps that entirely. */
+.glow-line {
+  filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.6));
+}
+
 body {
   background-color: var(--color-bg-base);
+  /* Very restrained ambient gradient bleed, anchored at two opposite
+     corners of the viewport (not centered behind content) -- reads as
+     studio lighting, not a hero aura. background-attachment: fixed
+     keeps it anchored to the viewport on tall, scrollable pages. */
+  background-image:
+    radial-gradient(ellipse 900px 700px at -10% -15%, rgba(167, 139, 250, 0.07), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 110% 115%, rgba(167, 139, 250, 0.05), transparent 60%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

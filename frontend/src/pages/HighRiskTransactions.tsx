@@ -52,7 +52,7 @@ export function HighRiskTransactions() {
         <FilterSelect label="Decision" value={decisionFilter} options={DECISION_OPTIONS} onChange={setDecisionFilter} />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-bg-surface">
+      <div className="overflow-x-auto card-dense">
         <table className="min-w-full divide-y divide-border text-sm">
           <thead>
             <tr className="text-left text-xs font-medium tracking-wide text-text-muted uppercase">

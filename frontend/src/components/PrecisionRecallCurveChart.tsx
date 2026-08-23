@@ -37,6 +37,13 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps) {
  * rule that 2+ series always carry a legend. The current slider position
  * is marked with a vertical reference line so the tradeoff at THIS
  * threshold is visually obvious, not just readable from the stat cards.
+ *
+ * Deliberate deviation from the redesign's "single accent color per
+ * chart" default: this chart's entire job is comparing two series, so
+ * collapsing to one color would destroy the thing the page exists to
+ * show. Precision (violet, glowing -- the "headline" metric this page
+ * is built around) is the only violet element on this chart; Recall
+ * gets a plain, unglowed neutral so violet keeps exactly one meaning.
  */
 export function PrecisionRecallCurveChart({ points, currentThreshold }: PrecisionRecallCurveChartProps) {
   return (
@@ -68,8 +75,25 @@ export function PrecisionRecallCurveChart({ points, currentThreshold }: Precisio
           formatter={(value) => <span style={{ color: TEXT_PRIMARY, fontSize: 13 }}>{value}</span>}
         />
         <ReferenceLine x={currentThreshold} stroke={TEXT_PRIMARY} strokeDasharray="4 4" />
-        <Line type="monotone" dataKey="precision" name="Precision" stroke={SERIES_COLOR.precision} strokeWidth={2} dot={false} isAnimationActive={false} />
-        <Line type="monotone" dataKey="recall" name="Recall" stroke={SERIES_COLOR.recall} strokeWidth={2} dot={false} isAnimationActive={false} />
+        <Line
+          type="monotone"
+          dataKey="precision"
+          name="Precision"
+          stroke={SERIES_COLOR.precision}
+          strokeWidth={2.5}
+          dot={false}
+          isAnimationActive={false}
+          className="glow-line"
+        />
+        <Line
+          type="monotone"
+          dataKey="recall"
+          name="Recall"
+          stroke={SERIES_COLOR.recall}
+          strokeWidth={2}
+          dot={false}
+          isAnimationActive={false}
+        />
       </LineChart>
     </ResponsiveContainer>
   );

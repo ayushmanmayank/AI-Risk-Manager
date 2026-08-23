@@ -3,9 +3,9 @@ import { ApiError, getChargebackEvidence } from '../api/client';
 import { useApiData } from '../api/hooks';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { DecisionBadge, FlaggedInAdvanceBadge, RiskTierBadge } from '../components/Badge';
-import { RiskMeter } from '../components/RiskMeter';
+import { RadialRing } from '../components/RadialRing';
 import { StatCard } from '../components/StatCard';
-import { SEVERITY_COLOR } from '../theme/colors';
+import { RISK_TIER_COLOR, SEVERITY_COLOR } from '../theme/colors';
 import type { AutoSummaryOut, EvidencePackageOut, TimelineEventOut } from '../types/api';
 import { formatAmount, formatTimestamp } from '../utils/format';
 
@@ -19,14 +19,14 @@ import { formatAmount, formatTimestamp } from '../utils/format';
 function AutoSummaryBlock({ autoSummary }: { autoSummary: AutoSummaryOut }) {
   if (!autoSummary.available || !autoSummary.text) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-bg-surface p-4 text-xs text-text-muted">
+      <div className="card border-dashed p-4 text-xs text-text-muted">
         Automated summary unavailable right now -- see the evidence records below for the full picture.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-border bg-bg-surface-raised p-4">
+    <div className="card bg-bg-surface-raised p-4">
       <div className="text-xs font-medium tracking-wide text-text-muted uppercase">Automated summary</div>
       <p className="mt-2 text-sm text-text-primary">{autoSummary.text}</p>
       <p className="mt-2 text-xs text-text-muted">
@@ -89,7 +89,7 @@ export function ChargebackDetail() {
 
       <AutoSummaryBlock autoSummary={data.auto_summary} />
 
-      <div className="rounded-lg border-2 p-6" style={{ borderColor: bannerColor, backgroundColor: `${bannerColor}1a` }}>
+      <div className="rounded-2xl border-2 p-6" style={{ borderColor: bannerColor, backgroundColor: `${bannerColor}1a` }}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="max-w-2xl text-sm text-text-primary">{summary.narrative}</p>
           <FlaggedInAdvanceBadge
@@ -102,21 +102,37 @@ export function ChargebackDetail() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Chargeback amount" value={formatAmount(data.chargeback.amount)} caption={data.chargeback.reason} />
         <StatCard label="Chargeback status" value={data.chargeback.status} />
-        <div className="rounded-lg border border-border bg-bg-surface p-4">
-          <div className="text-sm text-text-secondary">Fraud probability at scoring</div>
-          <div className="mt-2">
-            {summary.fraud_probability_at_scoring !== null && summary.risk_tier_at_scoring !== null ? (
-              <RiskMeter probability={summary.fraud_probability_at_scoring} tier={summary.risk_tier_at_scoring} />
-            ) : (
+        <div className="card flex items-center gap-4 p-4">
+          {summary.fraud_probability_at_scoring !== null && summary.risk_tier_at_scoring !== null ? (
+            <>
+              <RadialRing
+                percent={summary.fraud_probability_at_scoring * 100}
+                color={RISK_TIER_COLOR[summary.risk_tier_at_scoring]}
+                size={72}
+                strokeWidth={7}
+                label={
+                  <span
+                    className="font-mono text-sm font-semibold tabular-nums"
+                    style={{ color: RISK_TIER_COLOR[summary.risk_tier_at_scoring] }}
+                  >
+                    {(summary.fraud_probability_at_scoring * 100).toFixed(1)}%
+                  </span>
+                }
+              />
+              <div className="text-sm text-text-secondary">Fraud probability at scoring</div>
+            </>
+          ) : (
+            <div>
+              <div className="text-sm text-text-secondary">Fraud probability at scoring</div>
               <span className="font-mono text-2xl font-semibold text-text-primary">no data</span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
         <StatCard label="Refund on file" value={refund ? formatAmount(refund.amount) : 'none'} caption={refund?.reason} />
       </div>
 
       {transaction && (
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-bg-surface p-4">
+        <div className="card flex flex-wrap items-center gap-4 p-4">
           <span className="text-sm text-text-secondary">Risk tier at scoring</span>
           <RiskTierBadge tier={transaction.risk_tier} />
           <span className="text-sm text-text-secondary">Decision at scoring</span>
@@ -125,7 +141,7 @@ export function ChargebackDetail() {
         </div>
       )}
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Evidence timeline</h2>
         <ol className="mt-4">
           {data.timeline.map((event, index) => (
@@ -134,7 +150,7 @@ export function ChargebackDetail() {
         </ol>
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-4 text-xs text-text-muted">{data.data_model_note}</div>
+      <div className="card p-4 text-xs text-text-muted">{data.data_model_note}</div>
     </div>
   );
 }

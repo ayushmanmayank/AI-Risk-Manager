@@ -3,8 +3,9 @@ import { ApiError, getTransaction } from '../api/client';
 import { useApiData } from '../api/hooks';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { DecisionBadge, RiskTierBadge } from '../components/Badge';
-import { RiskMeter } from '../components/RiskMeter';
+import { RadialRing } from '../components/RadialRing';
 import { StatCard } from '../components/StatCard';
+import { RISK_TIER_COLOR } from '../theme/colors';
 import type { PredictionOut, ShapFeatureContribution } from '../types/api';
 import { formatAmount, formatTimestamp } from '../utils/format';
 
@@ -54,17 +55,29 @@ export function TransactionDetail() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Amount" value={formatAmount(data.amount)} />
-        <div className="rounded-lg border border-border bg-bg-surface p-4">
+        {/* Hero single-value metric -> radial ring (see the design plan:
+            hero stats with dedicated space get the ring, dense table
+            rows keep the horizontal RiskMeter). Ring color is always the
+            real tier color, never violet -- see RadialRing's docstring. */}
+        <div className="card flex items-center gap-4 p-4">
+          <RadialRing
+            percent={data.fraud_probability * 100}
+            color={RISK_TIER_COLOR[data.risk_tier]}
+            size={72}
+            strokeWidth={7}
+            label={
+              <span className="font-mono text-sm font-semibold tabular-nums" style={{ color: RISK_TIER_COLOR[data.risk_tier] }}>
+                {(data.fraud_probability * 100).toFixed(1)}%
+              </span>
+            }
+          />
           <div className="text-sm text-text-secondary">Fraud probability</div>
-          <div className="mt-2">
-            <RiskMeter probability={data.fraud_probability} tier={data.risk_tier} />
-          </div>
         </div>
         <StatCard label="Expected loss" value={formatAmount(data.expected_loss)} />
         <StatCard label="Model version" value={data.model_version} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-bg-surface p-4">
+      <div className="card flex flex-wrap items-center gap-4 p-4">
         <span className="text-sm text-text-secondary">Risk tier</span>
         <RiskTierBadge tier={data.risk_tier} />
         <span className="text-sm text-text-secondary">Decision</span>
@@ -73,7 +86,7 @@ export function TransactionDetail() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-bg-surface p-6">
+        <div className="card p-6">
           <h2 className="font-display text-base font-semibold text-risk-high">Top risk factors</h2>
           <p className="mt-1 text-xs text-text-muted">Pushed this transaction toward a higher fraud probability.</p>
           {top_positive_features.length === 0 ? (
@@ -87,7 +100,7 @@ export function TransactionDetail() {
           )}
         </div>
 
-        <div className="rounded-lg border border-border bg-bg-surface p-6">
+        <div className="card p-6">
           <h2 className="font-display text-base font-semibold text-risk-low">Risk-reducing factors</h2>
           <p className="mt-1 text-xs text-text-muted">Pushed this transaction toward being legitimate.</p>
           {top_negative_features.length === 0 ? (

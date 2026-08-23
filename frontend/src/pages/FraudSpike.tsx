@@ -1,10 +1,13 @@
+import { useEffect, useRef, useState } from 'react';
 import { getAlerts } from '../api/client';
 import { usePolling } from '../api/hooks';
 import { ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { SeverityBadge } from '../components/Badge';
 import { FraudRateComparisonChart } from '../components/FraudRateComparisonChart';
+import { Sparkline } from '../components/Sparkline';
+import type { SparklinePoint } from '../components/Sparkline';
 import { StatCard } from '../components/StatCard';
-import { SEVERITY_COLOR } from '../theme/colors';
+import { ACCENT, SEVERITY_COLOR } from '../theme/colors';
 import type { AlertsStatusOut } from '../types/api';
 import { formatChangePercent, formatTimestamp } from '../utils/format';
 
@@ -16,12 +19,36 @@ import { formatChangePercent, formatTimestamp } from '../utils/format';
 // provided for a presenter who wants to force an immediate check.
 const POLL_INTERVAL_MS = 3000;
 
+// How many recent poll readings the live sparkline keeps on screen --
+// ~1 minute of real history at the 3s interval above. This is purely a
+// client-side display buffer of values the page already fetches on its
+// existing poll; it adds no new API calls or backend data, it just stops
+// discarding each reading the instant a newer one arrives. Resets on
+// page reload/navigation (never persisted), same as everything else
+// this page shows.
+const SPARKLINE_MAX_POINTS = 20;
+
 function formatRate(value: number): string {
   return `${(value * 100).toFixed(3)}%`;
 }
 
 export function FraudSpike() {
   const poll = usePolling<AlertsStatusOut>(getAlerts, POLL_INTERVAL_MS);
+  const [history, setHistory] = useState<SparklinePoint[]>([]);
+  const tickRef = useRef(0);
+
+  // Accumulate each already-fetched poll reading into a short client-side
+  // buffer for the live trend sparkline below -- no new request, no new
+  // data: just retaining values this page already receives instead of
+  // discarding the previous reading every 3s. See SPARKLINE_MAX_POINTS.
+  useEffect(() => {
+    if (poll.status !== 'success') return;
+    tickRef.current += 1;
+    setHistory((previous) => [...previous, { tick: tickRef.current, value: poll.data.current_fraud_rate }].slice(-SPARKLINE_MAX_POINTS));
+    // Only re-run when a genuinely new reading arrives, not on every
+    // render (poll.data is a fresh object each successful fetch).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poll.status === 'success' ? poll.data : null]);
 
   if (poll.status === 'loading') return <LoadingBlock />;
   if (poll.status === 'error') {
@@ -35,7 +62,17 @@ export function FraudSpike() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-lg font-semibold text-text-primary">Fraud Spike Detector</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-lg font-semibold text-text-primary">Fraud Spike Detector</h1>
+            {/* Violet = "this is the live/interactive thing," never a
+                severity signal -- the calm/active banner below still owns
+                severity color entirely. See the design plan's rule on
+                keeping the two color systems separate. */}
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: ACCENT }}>
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ backgroundColor: ACCENT }} />
+              LIVE
+            </span>
+          </div>
           <p className="mt-1 max-w-2xl text-sm text-text-secondary">
             Live view of the rolling fraud-rate anomaly detector: compares the HIGH-risk rate among
             the last {data.window_size || 'N'} scored transactions against the model's baseline
@@ -58,7 +95,7 @@ export function FraudSpike() {
           this page: a brief crossfade when the state actually changes, not
           a continuous pulse -- see the redesign's motion plan. */}
       <div
-        className="rounded-lg border-2 p-6 transition-colors duration-200"
+        className="rounded-2xl border-2 p-6 transition-colors duration-200"
         style={{
           borderColor: SEVERITY_COLOR[data.severity],
           backgroundColor: `${SEVERITY_COLOR[data.severity]}1a`,
@@ -100,7 +137,21 @@ export function FraudSpike() {
         <StatCard label="Anomaly score (z)" value={data.anomaly_score.toFixed(2)} caption="spike threshold: z >= 3.0" />
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-base font-semibold text-text-primary">Live fraud rate (this session)</h2>
+          <span className="font-mono text-xs text-text-muted">last {history.length} readings</span>
+        </div>
+        <p className="mt-1 text-xs text-text-muted">
+          Built from this page's own polling (see "Auto-refreshes every 3s" above) -- no new data beyond what's
+          already fetched above, just kept on screen instead of discarded each tick. Resets on reload.
+        </p>
+        <div className="mt-3">
+          <Sparkline points={history} color={ACCENT} />
+        </div>
+      </div>
+
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Current vs. baseline fraud rate</h2>
         <FraudRateComparisonChart
           currentRate={data.current_fraud_rate}
@@ -109,7 +160,7 @@ export function FraudSpike() {
         />
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Alert history</h2>
         {data.recent_alerts.length === 0 ? (
           <p className="mt-3 text-sm text-text-secondary">No spike alerts have been triggered yet.</p>

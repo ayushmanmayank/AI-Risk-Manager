@@ -37,24 +37,34 @@ export const SEVERITY_COLOR: Record<'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', string> 
 };
 
 /** Categorical slots 1 & 2, in fixed order (never cycled) -- used for the
- * precision/recall curve, the only 2-series chart in this app. Chosen to
- * be clearly distinct from every risk-tier color above (a cool blue has
- * no risk-semantic meaning anywhere else in this app) so a 2-series chart
- * never reads as if it were encoding risk severity.
+ * precision/recall curve, the only 2-series chart in this app. Precision
+ * (the "headline" metric this page is built around) gets the single
+ * signal violet ACCENT below -- deliberately the only place on this
+ * chart violet appears, so it keeps one meaning. Recall gets a distinct
+ * neutral-blue that is neither violet nor a risk-tier color, so this
+ * 2-series comparison never reads as if it were encoding risk severity.
  */
 export const SERIES_COLOR = {
-  precision: '#5b8def',
-  recall: '#a68a5b',
+  precision: '#a78bfa',
+  recall: '#7c8b9e',
 };
 
 /** Neutral, non-status color for "the norm"/baseline series (e.g. Fraud
  * Spike's baseline-vs-current bars) -- deliberately not any risk-tier or
  * accent color, since a baseline isn't a risk state.
  */
-export const BASELINE_COLOR = '#565a63';
+export const BASELINE_COLOR = '#5c5468';
+
+/** The single signal-violet accent -- UI interaction/emphasis only
+ * (nav active state, focus rings, links, "live" indicators, the
+ * headline series above). NEVER used for risk severity -- see
+ * RISK_TIER_COLOR/DECISION_COLOR/SEVERITY_COLOR above for that, kept as
+ * a completely separate, unchanged color system on purpose.
+ */
+export const ACCENT = '#a78bfa';
 
 export const TEXT_PRIMARY = '#edeef0';
-export const TEXT_SECONDARY = '#9498a0';
-export const TEXT_MUTED = '#6b6f78';
-export const GRIDLINE = '#262931';
-export const CHART_SURFACE = '#16181d';
+export const TEXT_SECONDARY = '#9a94ac';
+export const TEXT_MUTED = '#6b6478';
+export const GRIDLINE = 'rgba(167, 139, 250, 0.12)';
+export const CHART_SURFACE = '#17141f';

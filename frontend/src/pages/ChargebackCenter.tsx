@@ -36,7 +36,7 @@ export function ChargebackCenter() {
           description="Run src/evidence/seed_chargebacks.py to seed a handful of simulated chargebacks against real scored transactions."
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-bg-surface">
+        <div className="overflow-x-auto card-dense">
           <table className="min-w-full divide-y divide-border text-sm">
             <thead>
               <tr className="text-left text-xs font-medium tracking-wide text-text-muted uppercase">

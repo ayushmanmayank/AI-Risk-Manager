@@ -13,7 +13,7 @@ interface StatCardProps {
  * type system reserves mono specifically for that). */
 export function StatCard({ label, value, caption, compact = false }: StatCardProps) {
   return (
-    <div className="rounded-lg border border-border bg-bg-surface p-4">
+    <div className="card p-4">
       <div className="text-sm text-text-secondary">{label}</div>
       <div
         className={`mt-1 font-mono font-semibold text-text-primary tabular-nums break-words ${compact ? 'text-base' : 'text-2xl'}`}

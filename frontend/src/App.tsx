@@ -31,7 +31,7 @@ export default function App() {
 
 function NotFound() {
   return (
-    <div className="rounded-lg border border-border bg-bg-surface p-10 text-center">
+    <div className="card p-10 text-center">
       <p className="font-display text-lg font-semibold text-text-primary">Page not built yet</p>
       <p className="mt-2 text-sm text-text-secondary">This page is planned for a later day of the sprint.</p>
     </div>

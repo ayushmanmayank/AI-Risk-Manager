@@ -39,7 +39,7 @@ function ReturnModelSection() {
         </p>
       </div>
 
-      <div className="rounded-lg border-2 border-risk-medium bg-risk-medium/10 p-4 text-sm text-text-primary">
+      <div className="rounded-2xl border-2 border-risk-medium bg-risk-medium/10 p-4 text-sm text-text-primary">
         <strong>Read this before trusting these numbers like the fraud model's:</strong>{' '}
         {data.dataset_honesty_note}
       </div>
@@ -51,7 +51,7 @@ function ReturnModelSection() {
         <StatCard label="Classification threshold" value={data.threshold.toFixed(2)} />
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Test-set metrics</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Precision" value={formatPercent(data.precision)} />
@@ -65,7 +65,7 @@ function ReturnModelSection() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Confusion matrix</h2>
         <p className="mt-1 text-xs text-text-muted">
           {data.test_set_size.toLocaleString()} held-out test orders, at threshold {data.threshold.toFixed(2)}.
@@ -116,7 +116,7 @@ export function ModelPerformance() {
         <StatCard label="Classification threshold" value={data.threshold.toFixed(2)} />
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Test-set metrics</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Precision" value={formatPercent(data.precision)} />
@@ -130,7 +130,7 @@ export function ModelPerformance() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Confusion matrix</h2>
         <p className="mt-1 text-xs text-text-muted">
           {data.test_set_size.toLocaleString()} held-out test transactions, at threshold {data.threshold.toFixed(2)}.
@@ -140,7 +140,7 @@ export function ModelPerformance() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-4 text-sm text-text-secondary">
+      <div className="card p-4 text-sm text-text-secondary">
         <strong className="text-text-primary">A note on what's real vs. simulated:</strong> this page's
         numbers come from the actual, audited held-out test set -- real historical transactions,
         scored once, never touched for tuning. The <strong className="text-text-primary">Dashboard</strong>,{' '}

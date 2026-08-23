@@ -69,7 +69,7 @@ export function ThresholdSimulator() {
         </p>
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-4 text-sm text-text-secondary">
+      <div className="card p-4 text-sm text-text-secondary">
         <strong className="text-text-primary">The core tradeoff:</strong> a{' '}
         <strong className="text-text-primary">lower</strong> threshold catches more fraud but flags
         more legitimate transactions too (more customer friction / false positives). A{' '}
@@ -78,7 +78,7 @@ export function ThresholdSimulator() {
         the other.
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <div className="flex items-center justify-between">
           <label htmlFor="threshold-slider" className="text-sm font-medium text-text-primary">
             Risk threshold
@@ -126,7 +126,7 @@ export function ThresholdSimulator() {
         />
       </div>
 
-      <div className="rounded-lg border border-border bg-bg-surface p-6">
+      <div className="card p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Precision / recall vs. threshold</h2>
         <p className="mt-1 text-xs text-text-muted">Dashed line marks the current slider position.</p>
         {curveError ? (
@@ -134,7 +134,7 @@ export function ThresholdSimulator() {
         ) : curve ? (
           <PrecisionRecallCurveChart points={curve} currentThreshold={debouncedThreshold} />
         ) : (
-          <div className="mt-3 h-[280px] animate-pulse rounded-lg bg-bg-surface-raised" />
+          <div className="mt-3 h-[280px] animate-pulse rounded-2xl bg-bg-surface-raised" />
         )}
       </div>
     </div>
