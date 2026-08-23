@@ -166,6 +166,32 @@ export interface ModelInfoOut {
   test_set_size: number;
 }
 
+/** Response from GET /api/v1/models/return. Mirrors
+ * api/schemas/return_model_info.py:ReturnModelInfoOut -- a SEPARATE model,
+ * SEPARATE dataset (UCI Online Retail II, not the fraud model's ULB
+ * dataset) -- never blend these two models' metrics together on screen.
+ */
+export interface ReturnModelInfoOut {
+  model_name: string;
+  model_version: string;
+  training_date: string;
+  dataset_version: string;
+  dataset_honesty_note: string;
+  threshold: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  pr_auc: number;
+  roc_auc: number;
+  false_positive_rate: number;
+  false_negative_rate: number;
+  tp: number;
+  fp: number;
+  fn: number;
+  tn: number;
+  test_set_size: number;
+}
+
 /** Response from POST /api/v1/simulate. Mirrors
  * api/schemas/simulate.py:SimulateResponse. Computed against the
  * VALIDATION split's precomputed probabilities, not live traffic -- see
