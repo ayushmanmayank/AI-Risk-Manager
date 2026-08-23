@@ -127,9 +127,11 @@ def test_flagged_in_advance_summary_traces_every_clause_to_a_real_field():
     assert "87.0%" in text
     # timing: chargeback filed 2024-03-05, transaction scored 2024-03-03 -> 2 days
     assert "2 days before the chargeback was filed" in text
-    # top_positive_features labels, verbatim, never invented meanings
+    # top_positive_features labels, verbatim (case-adjusted only for
+    # mid-sentence grammar -- the feature code itself, "V14", is never
+    # touched), never invented meanings
     assert "hour of day" in text.lower()
-    assert "Anonymized signal V14" in text
+    assert "anonymized signal V14" in text
     # no refund on file
     assert "No refund was issued prior to the dispute." in text
 
@@ -200,10 +202,11 @@ def test_summary_never_invents_a_meaning_for_anonymized_shap_features():
 
     result = generate_summary(package)
 
-    # The label is used verbatim ("Anonymized signal V14"); nothing in
-    # the codebase knows what V14 "really" represents, so the summary
-    # must never claim to (e.g. never say "device", "location", "IP").
-    assert "Anonymized signal V14" in result.text
+    # The label's feature code is used verbatim ("V14"; only the leading
+    # word's case is adjusted for mid-sentence grammar); nothing in the
+    # codebase knows what V14 "really" represents, so the summary must
+    # never claim to (e.g. never say "device", "location", "IP").
+    assert "anonymized signal V14" in result.text
     for invented_meaning in ("device", "location", "ip address", "browser", "geolocation"):
         assert invented_meaning not in result.text.lower()
 
