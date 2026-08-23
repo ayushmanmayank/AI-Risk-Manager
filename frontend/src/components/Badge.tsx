@@ -1,4 +1,4 @@
-import { DECISION_COLOR, RISK_TIER_COLOR, SEVERITY_COLOR } from '../theme/colors';
+import { DECISION_COLOR, RISK_TIER_COLOR, SEVERITY_COLOR, TEXT_MUTED } from '../theme/colors';
 import type { AlertSeverity, Decision, RiskTier } from '../types/api';
 
 function StatusBadge({ label, color }: { label: string; color: string }) {
@@ -32,7 +32,7 @@ export function SeverityBadge({ severity }: { severity: AlertSeverity }) {
  */
 export function FlaggedInAdvanceBadge({ flagged, hasData }: { flagged: boolean; hasData: boolean }) {
   if (!hasData) {
-    return <StatusBadge label="No prior risk data" color="#898781" />;
+    return <StatusBadge label="No prior risk data" color={TEXT_MUTED} />;
   }
   return flagged
     ? <StatusBadge label="Flagged in advance" color={SEVERITY_COLOR.NONE} />

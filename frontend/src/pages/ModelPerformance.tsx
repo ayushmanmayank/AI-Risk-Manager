@@ -28,18 +28,18 @@ function ReturnModelSection() {
   const data = returnModelInfo.data;
 
   return (
-    <div className="space-y-6 border-t border-[#e1e0d9] pt-8">
+    <div className="space-y-6 border-t border-border pt-8">
       <div>
-        <h1 className="text-lg font-semibold text-[#0b0b0b]">Return-Risk Model (Tier 2)</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[#52514e]">
+        <h1 className="font-display text-lg font-semibold text-text-primary">Return-Risk Model (Tier 2)</h1>
+        <p className="mt-1 max-w-2xl text-sm text-text-secondary">
           A completely separate model, trained on a completely separate dataset from the fraud
-          model above -- <strong className="text-[#0b0b0b]">{data.dataset_version}</strong>, not the
+          model above -- <strong className="text-text-primary">{data.dataset_version}</strong>, not the
           fraud model's ULB/Kaggle credit-card dataset. Held-out TEST-set performance, same
           discipline as above: nothing here was tuned against the test set.
         </p>
       </div>
 
-      <div className="rounded-lg border-2 border-[#c9822a] bg-[#c9822a0d] p-4 text-sm text-[#0b0b0b]">
+      <div className="rounded-2xl border-2 border-risk-medium bg-risk-medium/10 p-4 text-sm text-text-primary">
         <strong>Read this before trusting these numbers like the fraud model's:</strong>{' '}
         {data.dataset_honesty_note}
       </div>
@@ -51,8 +51,8 @@ function ReturnModelSection() {
         <StatCard label="Classification threshold" value={data.threshold.toFixed(2)} />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Test-set metrics</h2>
+      <div className="card p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Test-set metrics</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Precision" value={formatPercent(data.precision)} />
           <StatCard label="Recall" value={formatPercent(data.recall)} />
@@ -65,9 +65,9 @@ function ReturnModelSection() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Confusion matrix</h2>
-        <p className="mt-1 text-xs text-[#898781]">
+      <div className="card p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Confusion matrix</h2>
+        <p className="mt-1 text-xs text-text-muted">
           {data.test_set_size.toLocaleString()} held-out test orders, at threshold {data.threshold.toFixed(2)}.
         </p>
         <div className="mt-4">
@@ -99,9 +99,9 @@ export function ModelPerformance() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold text-[#0b0b0b]">Model Performance</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[#52514e]">
-          <strong className="text-[#0b0b0b]">Held-out TEST-set performance</strong> -- the final,
+        <h1 className="font-display text-lg font-semibold text-text-primary">Model Performance</h1>
+        <p className="mt-1 max-w-2xl text-sm text-text-secondary">
+          <strong className="text-text-primary">Held-out TEST-set performance</strong> -- the final,
           once-only evaluation split the model never saw during training or threshold tuning (see
           the Day 5 audit). This is different from validation numbers shown elsewhere during
           development, and different again from the live/simulated traffic on the Dashboard and
@@ -116,8 +116,8 @@ export function ModelPerformance() {
         <StatCard label="Classification threshold" value={data.threshold.toFixed(2)} />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Test-set metrics</h2>
+      <div className="card p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Test-set metrics</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Precision" value={formatPercent(data.precision)} />
           <StatCard label="Recall" value={formatPercent(data.recall)} />
@@ -130,9 +130,9 @@ export function ModelPerformance() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Confusion matrix</h2>
-        <p className="mt-1 text-xs text-[#898781]">
+      <div className="card p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Confusion matrix</h2>
+        <p className="mt-1 text-xs text-text-muted">
           {data.test_set_size.toLocaleString()} held-out test transactions, at threshold {data.threshold.toFixed(2)}.
         </p>
         <div className="mt-4">
@@ -140,14 +140,14 @@ export function ModelPerformance() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-4 text-sm text-[#52514e]">
-        <strong className="text-[#0b0b0b]">A note on what's real vs. simulated:</strong> this page's
+      <div className="card p-4 text-sm text-text-secondary">
+        <strong className="text-text-primary">A note on what's real vs. simulated:</strong> this page's
         numbers come from the actual, audited held-out test set -- real historical transactions,
-        scored once, never touched for tuning. The <strong className="text-[#0b0b0b]">Dashboard</strong>,{' '}
-        <strong className="text-[#0b0b0b]">High-Risk Transactions</strong>, and{' '}
-        <strong className="text-[#0b0b0b]">Fraud Spike</strong> pages instead show predictions made
+        scored once, never touched for tuning. The <strong className="text-text-primary">Dashboard</strong>,{' '}
+        <strong className="text-text-primary">High-Risk Transactions</strong>, and{' '}
+        <strong className="text-text-primary">Fraud Spike</strong> pages instead show predictions made
         during this demo session -- either replayed real transactions from{' '}
-        <code className="rounded bg-[#f0efec] px-1 py-0.5 text-xs">simulator/simulate.py</code> or
+        <code className="rounded bg-bg-surface-raised px-1 py-0.5 text-xs">simulator/simulate.py</code> or
         manual API calls. Both are genuine model outputs on real transaction data; neither is
         fabricated. But they answer different questions -- this page answers "how good is the
         model," the others answer "what is happening right now" -- and the two should never be

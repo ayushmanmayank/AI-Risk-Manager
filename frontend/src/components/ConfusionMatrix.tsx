@@ -23,9 +23,9 @@ interface ConfusionMatrixProps {
 
 function Cell({ value, label, color }: { value: number; label: string; color: string }) {
   return (
-    <div className="rounded-md border p-4 text-center" style={{ borderColor: color, backgroundColor: `${color}0d` }}>
-      <div className="text-lg font-semibold text-[#0b0b0b]">{value.toLocaleString()}</div>
-      <div className="text-xs text-[#52514e]">{label}</div>
+    <div className="rounded-md border p-4 text-center" style={{ borderColor: color, backgroundColor: `${color}1a` }}>
+      <div className="font-mono text-lg font-semibold tabular-nums text-text-primary">{value.toLocaleString()}</div>
+      <div className="text-xs text-text-secondary">{label}</div>
     </div>
   );
 }
@@ -52,18 +52,18 @@ export function ConfusionMatrix({
   return (
     <div className="inline-grid grid-cols-[auto_1fr_1fr] gap-2 text-sm">
       <div />
-      <div className="px-2 py-1 text-center text-xs font-medium text-[#898781]">
+      <div className="px-2 py-1 text-center text-xs font-medium text-text-secondary">
         Predicted: {negativeLabel}
       </div>
-      <div className="px-2 py-1 text-center text-xs font-medium text-[#898781]">
+      <div className="px-2 py-1 text-center text-xs font-medium text-text-secondary">
         Predicted: {positiveLabel}
       </div>
 
-      <div className="flex items-center px-2 text-xs font-medium text-[#898781]">Actual: {negativeLabel}</div>
+      <div className="flex items-center px-2 text-xs font-medium text-text-secondary">Actual: {negativeLabel}</div>
       <Cell value={tn} label="True Negative" color={SEVERITY_COLOR.NONE} />
       <Cell value={fp} label="False Positive" color={fpColor} />
 
-      <div className="flex items-center px-2 text-xs font-medium text-[#898781]">Actual: {positiveLabel}</div>
+      <div className="flex items-center px-2 text-xs font-medium text-text-secondary">Actual: {positiveLabel}</div>
       <Cell value={fn} label="False Negative" color={fnColor} />
       <Cell value={tp} label="True Positive" color={SEVERITY_COLOR.NONE} />
     </div>

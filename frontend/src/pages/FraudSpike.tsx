@@ -1,10 +1,13 @@
+import { useEffect, useRef, useState } from 'react';
 import { getAlerts } from '../api/client';
 import { usePolling } from '../api/hooks';
 import { ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { SeverityBadge } from '../components/Badge';
 import { FraudRateComparisonChart } from '../components/FraudRateComparisonChart';
+import { Sparkline } from '../components/Sparkline';
+import type { SparklinePoint } from '../components/Sparkline';
 import { StatCard } from '../components/StatCard';
-import { SEVERITY_COLOR } from '../theme/colors';
+import { ACCENT, SEVERITY_COLOR } from '../theme/colors';
 import type { AlertsStatusOut } from '../types/api';
 import { formatChangePercent, formatTimestamp } from '../utils/format';
 
@@ -16,12 +19,36 @@ import { formatChangePercent, formatTimestamp } from '../utils/format';
 // provided for a presenter who wants to force an immediate check.
 const POLL_INTERVAL_MS = 3000;
 
+// How many recent poll readings the live sparkline keeps on screen --
+// ~1 minute of real history at the 3s interval above. This is purely a
+// client-side display buffer of values the page already fetches on its
+// existing poll; it adds no new API calls or backend data, it just stops
+// discarding each reading the instant a newer one arrives. Resets on
+// page reload/navigation (never persisted), same as everything else
+// this page shows.
+const SPARKLINE_MAX_POINTS = 20;
+
 function formatRate(value: number): string {
   return `${(value * 100).toFixed(3)}%`;
 }
 
 export function FraudSpike() {
   const poll = usePolling<AlertsStatusOut>(getAlerts, POLL_INTERVAL_MS);
+  const [history, setHistory] = useState<SparklinePoint[]>([]);
+  const tickRef = useRef(0);
+
+  // Accumulate each already-fetched poll reading into a short client-side
+  // buffer for the live trend sparkline below -- no new request, no new
+  // data: just retaining values this page already receives instead of
+  // discarding the previous reading every 3s. See SPARKLINE_MAX_POINTS.
+  useEffect(() => {
+    if (poll.status !== 'success') return;
+    tickRef.current += 1;
+    setHistory((previous) => [...previous, { tick: tickRef.current, value: poll.data.current_fraud_rate }].slice(-SPARKLINE_MAX_POINTS));
+    // Only re-run when a genuinely new reading arrives, not on every
+    // render (poll.data is a fresh object each successful fetch).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poll.status === 'success' ? poll.data : null]);
 
   if (poll.status === 'loading') return <LoadingBlock />;
   if (poll.status === 'error') {
@@ -35,30 +62,43 @@ export function FraudSpike() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-[#0b0b0b]">Fraud Spike Detector</h1>
-          <p className="mt-1 max-w-2xl text-sm text-[#52514e]">
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-lg font-semibold text-text-primary">Fraud Spike Detector</h1>
+            {/* Violet = "this is the live/interactive thing," never a
+                severity signal -- the calm/active banner below still owns
+                severity color entirely. See the design plan's rule on
+                keeping the two color systems separate. */}
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: ACCENT }}>
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ backgroundColor: ACCENT }} />
+              LIVE
+            </span>
+          </div>
+          <p className="mt-1 max-w-2xl text-sm text-text-secondary">
             Live view of the rolling fraud-rate anomaly detector: compares the HIGH-risk rate among
             the last {data.window_size || 'N'} scored transactions against the model's baseline
             HIGH-tier rate from training data. Auto-refreshes every {POLL_INTERVAL_MS / 1000}s.
           </p>
           {poll.isStale && (
-            <p className="mt-1 text-xs text-[#d03b3b]">Last refresh failed -- showing the previous reading.</p>
+            <p className="mt-1 text-xs text-risk-high">Last refresh failed -- showing the previous reading.</p>
           )}
         </div>
         <button
           onClick={poll.refetch}
-          className="shrink-0 rounded-md border border-[#e1e0d9] px-4 py-2 text-sm font-medium text-[#0b0b0b] hover:bg-[#f0efec]"
+          className="shrink-0 rounded-md border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-bg-surface-raised focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-2"
         >
           Refresh now
         </button>
       </div>
 
-      {/* Calm / active-spike status banner -- the dominant element on the page */}
+      {/* Calm / active-spike status banner -- the dominant element on the
+          page. transition-colors gives the ONE deliberate motion moment on
+          this page: a brief crossfade when the state actually changes, not
+          a continuous pulse -- see the redesign's motion plan. */}
       <div
-        className="rounded-lg border-2 p-6"
+        className="rounded-2xl border-2 p-6 transition-colors duration-200"
         style={{
           borderColor: SEVERITY_COLOR[data.severity],
-          backgroundColor: `${SEVERITY_COLOR[data.severity]}0d`,
+          backgroundColor: `${SEVERITY_COLOR[data.severity]}1a`,
         }}
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -66,13 +106,13 @@ export function FraudSpike() {
             <p className="text-xl font-semibold" style={{ color: SEVERITY_COLOR[data.severity] }}>
               {isCalm ? 'No active spike' : 'Active fraud-rate spike detected'}
             </p>
-            <p className="mt-1 text-sm text-[#52514e]">
+            <p className="mt-1 text-sm text-text-secondary">
               {isCalm
                 ? "Recent traffic's HIGH-risk rate is within normal range."
                 : `First detected ${data.first_detected_at ? formatTimestamp(data.first_detected_at) : 'just now'}.`}
             </p>
             {data.insufficient_data && (
-              <p className="mt-1 text-xs text-[#898781]">
+              <p className="mt-1 text-xs text-text-muted">
                 Only {data.window_size} prediction{data.window_size === 1 ? '' : 's'} scored so far --
                 not enough history yet for a confident read (needs at least 10).
               </p>
@@ -97,8 +137,22 @@ export function FraudSpike() {
         <StatCard label="Anomaly score (z)" value={data.anomaly_score.toFixed(2)} caption="spike threshold: z >= 3.0" />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Current vs. baseline fraud rate</h2>
+      <div className="card p-6">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-base font-semibold text-text-primary">Live fraud rate (this session)</h2>
+          <span className="font-mono text-xs text-text-muted">last {history.length} readings</span>
+        </div>
+        <p className="mt-1 text-xs text-text-muted">
+          Built from this page's own polling (see "Auto-refreshes every 3s" above) -- no new data beyond what's
+          already fetched above, just kept on screen instead of discarded each tick. Resets on reload.
+        </p>
+        <div className="mt-3">
+          <Sparkline points={history} color={ACCENT} />
+        </div>
+      </div>
+
+      <div className="card p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Current vs. baseline fraud rate</h2>
         <FraudRateComparisonChart
           currentRate={data.current_fraud_rate}
           baselineRate={data.baseline_fraud_rate}
@@ -106,19 +160,19 @@ export function FraudSpike() {
         />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Alert history</h2>
+      <div className="card p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Alert history</h2>
         {data.recent_alerts.length === 0 ? (
-          <p className="mt-3 text-sm text-[#52514e]">No spike alerts have been triggered yet.</p>
+          <p className="mt-3 text-sm text-text-secondary">No spike alerts have been triggered yet.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-[#e1e0d9]">
+          <ul className="mt-3 divide-y divide-border">
             {data.recent_alerts.map((alert) => (
               <li key={alert.alert_id} className="flex flex-wrap items-start justify-between gap-4 py-3 text-sm">
                 <div>
                   <SeverityBadge severity={alert.severity} />
-                  <p className="mt-1 text-[#0b0b0b]">{alert.description}</p>
+                  <p className="mt-1 text-text-primary">{alert.description}</p>
                 </div>
-                <span className="shrink-0 text-xs text-[#898781]">{formatTimestamp(alert.created_at)}</span>
+                <span className="shrink-0 font-mono text-xs text-text-muted">{formatTimestamp(alert.created_at)}</span>
               </li>
             ))}
           </ul>
