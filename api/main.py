@@ -20,6 +20,7 @@ from api.routes import (
     chargebacks,
     health,
     models,
+    monitoring,
     predict,
     return_model_info,
     return_predict,
@@ -28,6 +29,7 @@ from api.routes import (
 )
 from api.services.anomaly_service import anomaly_service
 from api.services.db import init_db
+from api.services.drift_service import drift_service
 from api.services.model_info_service import model_info_service
 from api.services.model_service import model_service
 from api.services.return_model_info_service import return_model_info_service
@@ -48,6 +50,7 @@ async def lifespan(app: FastAPI):
     model_info_service.load()
     return_model_service.load()
     return_model_info_service.load()
+    drift_service.load()
     logger.info(
         "startup complete model_loaded=%s baseline_fraud_rate=%.4f%%",
         model_service.is_loaded,
@@ -126,3 +129,4 @@ app.include_router(models.router, prefix="/api/v1", tags=["models"])
 app.include_router(chargebacks.router, prefix="/api/v1", tags=["chargebacks"])
 app.include_router(return_predict.router, prefix="/api/v1", tags=["return-risk"])
 app.include_router(return_model_info.router, prefix="/api/v1", tags=["return-risk"])
+app.include_router(monitoring.router, prefix="/api/v1", tags=["monitoring"])

@@ -1,9 +1,10 @@
-import { getModelInfo, getReturnModelInfo } from '../api/client';
+import { getDriftReport, getModelInfo, getReturnModelInfo } from '../api/client';
 import { useApiData } from '../api/hooks';
 import { ConfusionMatrix } from '../components/ConfusionMatrix';
+import { DriftMonitor } from '../components/DriftMonitor';
 import { ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { StatCard } from '../components/StatCard';
-import type { ModelInfoOut, ReturnModelInfoOut } from '../types/api';
+import type { DriftReportOut, ModelInfoOut, ReturnModelInfoOut } from '../types/api';
 import { formatTimestamp } from '../utils/format';
 
 function formatPercent(value: number): string {
@@ -86,6 +87,22 @@ function ReturnModelSection() {
   );
 }
 
+/** Tier 3B's drift monitor, in its own independently-loading section --
+ * same pattern as ReturnModelSection above: it must never block or be
+ * blocked by the fraud model's own stat cards rendering, since the two
+ * come from separate endpoints with separate failure modes.
+ */
+function DriftMonitorSection() {
+  const driftReport = useApiData<DriftReportOut>(getDriftReport);
+
+  if (driftReport.status === 'loading') return <LoadingBlock />;
+  if (driftReport.status === 'error') {
+    return <ErrorBlock message={driftReport.error.message} onRetry={driftReport.refetch} />;
+  }
+
+  return <DriftMonitor report={driftReport.data} />;
+}
+
 export function ModelPerformance() {
   const modelInfo = useApiData<ModelInfoOut>(getModelInfo);
 
@@ -155,6 +172,7 @@ export function ModelPerformance() {
       </div>
 
       <ReturnModelSection />
+      <DriftMonitorSection />
     </div>
   );
 }
