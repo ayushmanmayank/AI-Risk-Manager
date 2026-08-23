@@ -1,6 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 const NAV_LINKS = [
+  // Deliberately first, above Dashboard -- this is the one nav entry aimed
+  // at a judge doing an evaluation pass rather than at demo/workflow use,
+  // so it gets the opposite placement decision from Tier 3B's drift
+  // monitor (a lower-priority capability that stayed off the nav entirely):
+  // here, being found first IS the page's job. See SubmissionMapping.tsx.
+  { to: '/submission', label: 'Submission' },
   { to: '/', label: 'Dashboard' },
   { to: '/high-risk', label: 'High-Risk Transactions' },
   { to: '/fraud-spike', label: 'Fraud Spike' },
