@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { FraudSpike } from './pages/FraudSpike';
 import { HighRiskTransactions } from './pages/HighRiskTransactions';
 import { ModelPerformance } from './pages/ModelPerformance';
+import { SubmissionMapping } from './pages/SubmissionMapping';
 import { ThresholdSimulator } from './pages/ThresholdSimulator';
 import { TransactionDetail } from './pages/TransactionDetail';
 
@@ -13,6 +14,7 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
+        <Route path="/submission" element={<SubmissionMapping />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/high-risk" element={<HighRiskTransactions />} />
         <Route path="/transactions/:id" element={<TransactionDetail />} />
