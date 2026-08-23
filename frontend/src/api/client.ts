@@ -2,6 +2,7 @@ import type {
   AlertsStatusOut,
   AnalyticsOut,
   ChargebackListItemOut,
+  DriftReportOut,
   EvidencePackageOut,
   HealthOut,
   ModelInfoOut,
@@ -126,4 +127,8 @@ export function getChargebacks(): Promise<ChargebackListItemOut[]> {
 
 export function getChargebackEvidence(chargebackId: string): Promise<EvidencePackageOut> {
   return request<EvidencePackageOut>(`/chargebacks/${encodeURIComponent(chargebackId)}`);
+}
+
+export function getDriftReport(): Promise<DriftReportOut> {
+  return request<DriftReportOut>('/monitoring/drift');
 }

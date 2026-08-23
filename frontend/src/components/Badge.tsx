@@ -1,7 +1,7 @@
 import { DECISION_COLOR, RISK_TIER_COLOR, SEVERITY_COLOR, TEXT_MUTED } from '../theme/colors';
-import type { AlertSeverity, Decision, RiskTier } from '../types/api';
+import type { AlertSeverity, Decision, DriftStatus, RiskTier } from '../types/api';
 
-function StatusBadge({ label, color }: { label: string; color: string }) {
+export function StatusBadge({ label, color }: { label: string; color: string }) {
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -37,4 +37,24 @@ export function FlaggedInAdvanceBadge({ flagged, hasData }: { flagged: boolean; 
   return flagged
     ? <StatusBadge label="Flagged in advance" color={SEVERITY_COLOR.NONE} />
     : <StatusBadge label="Not flagged" color={SEVERITY_COLOR.HIGH} />;
+}
+
+/** Reuses the same 3-band severity colors as everywhere else on this page
+ * (STABLE->good/green, MODERATE_DRIFT->warning/orange, SIGNIFICANT_DRIFT->
+ * critical/red) rather than inventing a new palette for a fourth status
+ * concept -- see src/monitoring/drift_detector.py for what these mean. */
+const DRIFT_STATUS_LABEL: Record<DriftStatus, string> = {
+  STABLE: 'Stable',
+  MODERATE_DRIFT: 'Moderate drift',
+  SIGNIFICANT_DRIFT: 'Significant drift',
+};
+
+export const DRIFT_STATUS_COLOR: Record<DriftStatus, string> = {
+  STABLE: SEVERITY_COLOR.NONE,
+  MODERATE_DRIFT: SEVERITY_COLOR.MEDIUM,
+  SIGNIFICANT_DRIFT: SEVERITY_COLOR.HIGH,
+};
+
+export function DriftStatusBadge({ status }: { status: DriftStatus }) {
+  return <StatusBadge label={DRIFT_STATUS_LABEL[status]} color={DRIFT_STATUS_COLOR[status]} />;
 }

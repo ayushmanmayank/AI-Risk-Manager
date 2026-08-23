@@ -293,3 +293,31 @@ export interface EvidencePackageOut {
   auto_summary: AutoSummaryOut;
   data_model_note: string;
 }
+
+export type DriftStatus = 'STABLE' | 'MODERATE_DRIFT' | 'SIGNIFICANT_DRIFT';
+
+/** One monitored feature's PSI drift score. Mirrors
+ * api/schemas/monitoring.py:FeatureDriftOut. `psi` has no fixed upper
+ * bound -- 0 means identical distributions, growing as training vs. live
+ * diverge. See src/monitoring/drift_detector.py for the full method and
+ * its honesty notes on thresholds/sample size/bucketing. */
+export interface FeatureDriftOut {
+  feature: string;
+  psi: number;
+  status: DriftStatus;
+  reference_sample_size: number;
+  live_sample_size: number;
+}
+
+/** Response from GET /api/v1/monitoring/drift. Mirrors
+ * api/schemas/monitoring.py:DriftReportOut. `insufficient_data: true`
+ * means live_sample_size was below min_live_sample_size -- every `psi` is
+ * 0 and `overall_status` is a placeholder "STABLE", not a real reading;
+ * check this flag before trusting the numbers. */
+export interface DriftReportOut {
+  overall_status: DriftStatus;
+  features: FeatureDriftOut[];
+  live_sample_size: number;
+  min_live_sample_size: number;
+  insufficient_data: boolean;
+}
