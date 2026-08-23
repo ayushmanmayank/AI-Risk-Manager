@@ -154,15 +154,21 @@ rule."
 
 ---
 
-## 7. Chargeback Center — one caught, one missed — ~45s
+## 7. Chargeback Center — one caught, one missed — ~50s
 
 **Do:** click **Chargebacks**. Click a row badged **Flagged in advance**.
 
 **Say:** "This chargeback data is seeded for the demo — labeled as such
 everywhere, including on this page — because there's no real chargeback
 history to work with. But the transaction and risk data underneath is
-real." Point at the green banner: "Here, the model already held this
-transaction *before* the dispute ever came in."
+real." Point at the **Automated summary** box at the top of the page:
+"This sentence is generated automatically — it's a Python template
+filling in real fields from the records below it, not an LLM call, and
+it's labeled that way on purpose. Nothing here is invented — every
+number and signal name in that sentence exists in the timeline you can
+already see underneath." Then point at the green banner below it: "Here,
+the model already held this transaction *before* the dispute ever came
+in."
 
 **Do:** back out, click a row badged **Not flagged**.
 
