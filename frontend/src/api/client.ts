@@ -7,6 +7,7 @@ import type {
   ModelInfoOut,
   PaginatedTransactions,
   PredictionOut,
+  ReturnModelInfoOut,
   SimulateRequest,
   SimulateResponse,
   TransactionIn,
@@ -113,6 +114,10 @@ export function simulate(body: SimulateRequest): Promise<SimulateResponse> {
 
 export function getModelInfo(): Promise<ModelInfoOut> {
   return request<ModelInfoOut>('/models');
+}
+
+export function getReturnModelInfo(): Promise<ReturnModelInfoOut> {
+  return request<ReturnModelInfoOut>('/models/return');
 }
 
 export function getChargebacks(): Promise<ChargebackListItemOut[]> {

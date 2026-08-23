@@ -1,13 +1,89 @@
-import { getModelInfo } from '../api/client';
+import { getModelInfo, getReturnModelInfo } from '../api/client';
 import { useApiData } from '../api/hooks';
 import { ConfusionMatrix } from '../components/ConfusionMatrix';
 import { ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { StatCard } from '../components/StatCard';
-import type { ModelInfoOut } from '../types/api';
+import type { ModelInfoOut, ReturnModelInfoOut } from '../types/api';
 import { formatTimestamp } from '../utils/format';
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+/** Tier 2's return-risk model, in its own clearly-separated section --
+ * never merged into the fraud model's stat cards above, and never
+ * described as coming from the same dataset. See
+ * api/services/return_model_info_service.py's DATASET_HONESTY_NOTE for
+ * why this model's numbers get an explicit caution banner the fraud
+ * model's don't.
+ */
+function ReturnModelSection() {
+  const returnModelInfo = useApiData<ReturnModelInfoOut>(getReturnModelInfo);
+
+  if (returnModelInfo.status === 'loading') return <LoadingBlock />;
+  if (returnModelInfo.status === 'error') {
+    return <ErrorBlock message={returnModelInfo.error.message} onRetry={returnModelInfo.refetch} />;
+  }
+
+  const data = returnModelInfo.data;
+
+  return (
+    <div className="space-y-6 border-t border-[#e1e0d9] pt-8">
+      <div>
+        <h1 className="text-lg font-semibold text-[#0b0b0b]">Return-Risk Model (Tier 2)</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[#52514e]">
+          A completely separate model, trained on a completely separate dataset from the fraud
+          model above -- <strong className="text-[#0b0b0b]">{data.dataset_version}</strong>, not the
+          fraud model's ULB/Kaggle credit-card dataset. Held-out TEST-set performance, same
+          discipline as above: nothing here was tuned against the test set.
+        </p>
+      </div>
+
+      <div className="rounded-lg border-2 border-[#c9822a] bg-[#c9822a0d] p-4 text-sm text-[#0b0b0b]">
+        <strong>Read this before trusting these numbers like the fraud model's:</strong>{' '}
+        {data.dataset_honesty_note}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Model version" value={data.model_version} caption={data.model_name} />
+        <StatCard label="Training date" value={formatTimestamp(data.training_date)} />
+        <StatCard label="Dataset" value={data.dataset_version} compact />
+        <StatCard label="Classification threshold" value={data.threshold.toFixed(2)} />
+      </div>
+
+      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
+        <h2 className="text-base font-semibold text-[#0b0b0b]">Test-set metrics</h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Precision" value={formatPercent(data.precision)} />
+          <StatCard label="Recall" value={formatPercent(data.recall)} />
+          <StatCard label="F1 score" value={data.f1.toFixed(4)} />
+          <StatCard label="PR-AUC" value={data.pr_auc.toFixed(4)} />
+          <StatCard label="ROC-AUC" value={data.roc_auc.toFixed(4)} />
+          <StatCard label="False positive rate" value={formatPercent(data.false_positive_rate)} />
+          <StatCard label="False negative rate" value={formatPercent(data.false_negative_rate)} />
+          <StatCard label="Test set size" value={data.test_set_size.toLocaleString()} />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
+        <h2 className="text-base font-semibold text-[#0b0b0b]">Confusion matrix</h2>
+        <p className="mt-1 text-xs text-[#898781]">
+          {data.test_set_size.toLocaleString()} held-out test orders, at threshold {data.threshold.toFixed(2)}.
+        </p>
+        <div className="mt-4">
+          <ConfusionMatrix
+            tp={data.tp}
+            fp={data.fp}
+            fn={data.fn}
+            tn={data.tn}
+            positiveLabel="Returned"
+            negativeLabel="Not returned"
+            costAsymmetryEstablished={false}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ModelPerformance() {
@@ -77,6 +153,8 @@ export function ModelPerformance() {
         model," the others answer "what is happening right now" -- and the two should never be
         quoted interchangeably.
       </div>
+
+      <ReturnModelSection />
     </div>
   );
 }

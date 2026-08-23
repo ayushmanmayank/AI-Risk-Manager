@@ -14,11 +14,24 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import alerts, analytics, chargebacks, health, models, predict, simulate, transactions
+from api.routes import (
+    alerts,
+    analytics,
+    chargebacks,
+    health,
+    models,
+    predict,
+    return_model_info,
+    return_predict,
+    simulate,
+    transactions,
+)
 from api.services.anomaly_service import anomaly_service
 from api.services.db import init_db
 from api.services.model_info_service import model_info_service
 from api.services.model_service import model_service
+from api.services.return_model_info_service import return_model_info_service
+from api.services.return_model_service import return_model_service
 from api.services.simulation_service import simulation_service
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -33,6 +46,8 @@ async def lifespan(app: FastAPI):
     anomaly_service.load()
     simulation_service.load()
     model_info_service.load()
+    return_model_service.load()
+    return_model_info_service.load()
     logger.info(
         "startup complete model_loaded=%s baseline_fraud_rate=%.4f%%",
         model_service.is_loaded,
@@ -109,3 +124,5 @@ app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"])
 app.include_router(simulate.router, prefix="/api/v1", tags=["simulate"])
 app.include_router(models.router, prefix="/api/v1", tags=["models"])
 app.include_router(chargebacks.router, prefix="/api/v1", tags=["chargebacks"])
+app.include_router(return_predict.router, prefix="/api/v1", tags=["return-risk"])
+app.include_router(return_model_info.router, prefix="/api/v1", tags=["return-risk"])
