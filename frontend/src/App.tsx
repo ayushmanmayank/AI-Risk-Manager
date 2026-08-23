@@ -31,9 +31,9 @@ export default function App() {
 
 function NotFound() {
   return (
-    <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-10 text-center">
-      <p className="text-lg font-semibold text-[#0b0b0b]">Page not built yet</p>
-      <p className="mt-2 text-sm text-[#52514e]">This page is planned for a later day of the sprint.</p>
+    <div className="rounded-lg border border-border bg-bg-surface p-10 text-center">
+      <p className="font-display text-lg font-semibold text-text-primary">Page not built yet</p>
+      <p className="mt-2 text-sm text-text-secondary">This page is planned for a later day of the sprint.</p>
     </div>
   );
 }

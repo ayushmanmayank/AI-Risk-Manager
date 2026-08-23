@@ -14,9 +14,9 @@ function ChartTooltip({ active, payload }: TooltipContentProps) {
   const point = payload[0];
   const tier = (point.payload as { tier: RiskTier }).tier;
   return (
-    <div className="rounded-md border border-[#e1e0d9] bg-[#fcfcfb] px-3 py-2 text-sm shadow-sm">
-      <span className="font-semibold text-[#0b0b0b]">{tier}</span>
-      <span className="ml-2 text-[#52514e]">{Number(point.value).toLocaleString()} transactions</span>
+    <div className="rounded-md border border-border bg-bg-surface px-3 py-2 text-sm">
+      <span className="font-semibold text-text-primary">{tier}</span>
+      <span className="ml-2 font-mono text-text-secondary">{Number(point.value).toLocaleString()} transactions</span>
     </div>
   );
 }
@@ -41,7 +41,7 @@ export function RiskTierBarChart({ counts }: RiskTierBarChartProps) {
         />
         <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: TEXT_MUTED, fontSize: 12 }} />
         <Tooltip content={(props) => <ChartTooltip {...props} />} cursor={{ fill: GRIDLINE, opacity: 0.4 }} />
-        <Bar dataKey="count" barSize={40} radius={[4, 4, 0, 0]}>
+        <Bar dataKey="count" barSize={40} radius={[4, 4, 0, 0]} isAnimationActive={false}>
           {data.map((entry) => (
             <Cell key={entry.tier} fill={RISK_TIER_COLOR[entry.tier]} />
           ))}

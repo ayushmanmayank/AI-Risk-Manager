@@ -57,10 +57,10 @@ export function Dashboard() {
         />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Risk tier distribution</h2>
+      <div className="rounded-lg border border-border bg-bg-surface p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Risk tier distribution</h2>
         <RiskTierBarChart counts={tierCounts} />
-        <div className="mt-2 flex gap-6 text-sm text-[#52514e]">
+        <div className="mt-2 flex gap-6 text-sm text-text-secondary">
           {RISK_TIERS.map((tier) => (
             <span key={tier} className="flex items-center gap-2">
               <span
@@ -73,8 +73,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Decisions</h2>
+      <div className="rounded-lg border border-border bg-bg-surface p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Decisions</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {DECISIONS.map((decision) => (
             <StatCard
@@ -95,10 +95,10 @@ function DashboardSkeleton() {
     <div className="space-y-8 animate-pulse">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-24 rounded-lg border border-[#e1e0d9] bg-[#f0efec]" />
+          <div key={i} className="h-24 rounded-lg border border-border bg-bg-surface-raised" />
         ))}
       </div>
-      <div className="h-72 rounded-lg border border-[#e1e0d9] bg-[#f0efec]" />
+      <div className="h-72 rounded-lg border border-border bg-bg-surface-raised" />
     </div>
   );
 }

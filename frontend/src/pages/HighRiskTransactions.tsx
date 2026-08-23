@@ -4,8 +4,9 @@ import { getTransactions } from '../api/client';
 import { useApiData } from '../api/hooks';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { DecisionBadge, RiskTierBadge } from '../components/Badge';
+import { RiskMeter } from '../components/RiskMeter';
 import type { Decision, PaginatedTransactions, RiskTier } from '../types/api';
-import { formatAmount, formatProbability, formatTimestamp } from '../utils/format';
+import { formatAmount, formatTimestamp } from '../utils/format';
 
 const RISK_TIER_OPTIONS: Array<RiskTier | 'ALL'> = ['ALL', 'LOW', 'MEDIUM', 'HIGH'];
 const DECISION_OPTIONS: Array<Decision | 'ALL'> = ['ALL', 'ALLOW', 'REVIEW', 'HOLD'];
@@ -51,10 +52,10 @@ export function HighRiskTransactions() {
         <FilterSelect label="Decision" value={decisionFilter} options={DECISION_OPTIONS} onChange={setDecisionFilter} />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-[#e1e0d9] bg-[#fcfcfb]">
-        <table className="min-w-full divide-y divide-[#e1e0d9] text-sm">
+      <div className="overflow-x-auto rounded-lg border border-border bg-bg-surface">
+        <table className="min-w-full divide-y divide-border text-sm">
           <thead>
-            <tr className="text-left text-xs font-medium tracking-wide text-[#898781] uppercase">
+            <tr className="text-left text-xs font-medium tracking-wide text-text-muted uppercase">
               <th className="px-4 py-3">Transaction ID</th>
               <th className="px-4 py-3">Amount</th>
               <th className="px-4 py-3">Fraud probability</th>
@@ -64,32 +65,34 @@ export function HighRiskTransactions() {
               <th className="px-4 py-3">Timestamp</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e1e0d9]">
+          <tbody className="divide-y divide-border">
             {filtered.map((item) => (
               <tr
                 key={item.transaction_id}
                 onClick={() => navigate(`/transactions/${item.transaction_id}`)}
-                className="cursor-pointer hover:bg-[#f0efec]"
+                className="cursor-pointer hover:bg-bg-surface-raised"
               >
-                <td className="max-w-[220px] truncate px-4 py-3 font-mono text-xs text-[#52514e]">
+                <td className="max-w-[220px] truncate px-4 py-3 font-mono text-xs text-text-secondary">
                   {item.transaction_id}
                 </td>
-                <td className="px-4 py-3 text-[#0b0b0b]">{formatAmount(item.amount)}</td>
-                <td className="px-4 py-3 text-[#0b0b0b]">{formatProbability(item.fraud_probability)}</td>
+                <td className="px-4 py-3 font-mono tabular-nums text-text-primary">{formatAmount(item.amount)}</td>
+                <td className="px-4 py-3">
+                  <RiskMeter probability={item.fraud_probability} tier={item.risk_tier} compact />
+                </td>
                 <td className="px-4 py-3">
                   <RiskTierBadge tier={item.risk_tier} />
                 </td>
-                <td className="px-4 py-3 text-[#0b0b0b]">{formatAmount(item.expected_loss)}</td>
+                <td className="px-4 py-3 font-mono tabular-nums text-text-primary">{formatAmount(item.expected_loss)}</td>
                 <td className="px-4 py-3">
                   <DecisionBadge decision={item.decision} />
                 </td>
-                <td className="px-4 py-3 text-[#52514e]">{formatTimestamp(item.timestamp)}</td>
+                <td className="px-4 py-3 font-mono text-xs text-text-secondary">{formatTimestamp(item.timestamp)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-[#52514e]">No transactions match the selected filters.</p>
+          <p className="px-4 py-6 text-center text-sm text-text-secondary">No transactions match the selected filters.</p>
         )}
       </div>
     </div>
@@ -108,12 +111,12 @@ function FilterSelect<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-[#52514e]">
+    <label className="flex items-center gap-2 text-sm text-text-secondary">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value as T)}
-        className="rounded-md border border-[#e1e0d9] bg-[#fcfcfb] px-2 py-1 text-sm text-[#0b0b0b]"
+        className="rounded-md border border-border bg-bg-surface px-2 py-1 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-2"
       >
         {options.map((option) => (
           <option key={option} value={option}>

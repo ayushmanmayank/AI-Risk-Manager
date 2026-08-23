@@ -35,30 +35,33 @@ export function FraudSpike() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-[#0b0b0b]">Fraud Spike Detector</h1>
-          <p className="mt-1 max-w-2xl text-sm text-[#52514e]">
+          <h1 className="font-display text-lg font-semibold text-text-primary">Fraud Spike Detector</h1>
+          <p className="mt-1 max-w-2xl text-sm text-text-secondary">
             Live view of the rolling fraud-rate anomaly detector: compares the HIGH-risk rate among
             the last {data.window_size || 'N'} scored transactions against the model's baseline
             HIGH-tier rate from training data. Auto-refreshes every {POLL_INTERVAL_MS / 1000}s.
           </p>
           {poll.isStale && (
-            <p className="mt-1 text-xs text-[#d03b3b]">Last refresh failed -- showing the previous reading.</p>
+            <p className="mt-1 text-xs text-risk-high">Last refresh failed -- showing the previous reading.</p>
           )}
         </div>
         <button
           onClick={poll.refetch}
-          className="shrink-0 rounded-md border border-[#e1e0d9] px-4 py-2 text-sm font-medium text-[#0b0b0b] hover:bg-[#f0efec]"
+          className="shrink-0 rounded-md border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-bg-surface-raised focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-2"
         >
           Refresh now
         </button>
       </div>
 
-      {/* Calm / active-spike status banner -- the dominant element on the page */}
+      {/* Calm / active-spike status banner -- the dominant element on the
+          page. transition-colors gives the ONE deliberate motion moment on
+          this page: a brief crossfade when the state actually changes, not
+          a continuous pulse -- see the redesign's motion plan. */}
       <div
-        className="rounded-lg border-2 p-6"
+        className="rounded-lg border-2 p-6 transition-colors duration-200"
         style={{
           borderColor: SEVERITY_COLOR[data.severity],
-          backgroundColor: `${SEVERITY_COLOR[data.severity]}0d`,
+          backgroundColor: `${SEVERITY_COLOR[data.severity]}1a`,
         }}
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -66,13 +69,13 @@ export function FraudSpike() {
             <p className="text-xl font-semibold" style={{ color: SEVERITY_COLOR[data.severity] }}>
               {isCalm ? 'No active spike' : 'Active fraud-rate spike detected'}
             </p>
-            <p className="mt-1 text-sm text-[#52514e]">
+            <p className="mt-1 text-sm text-text-secondary">
               {isCalm
                 ? "Recent traffic's HIGH-risk rate is within normal range."
                 : `First detected ${data.first_detected_at ? formatTimestamp(data.first_detected_at) : 'just now'}.`}
             </p>
             {data.insufficient_data && (
-              <p className="mt-1 text-xs text-[#898781]">
+              <p className="mt-1 text-xs text-text-muted">
                 Only {data.window_size} prediction{data.window_size === 1 ? '' : 's'} scored so far --
                 not enough history yet for a confident read (needs at least 10).
               </p>
@@ -97,8 +100,8 @@ export function FraudSpike() {
         <StatCard label="Anomaly score (z)" value={data.anomaly_score.toFixed(2)} caption="spike threshold: z >= 3.0" />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Current vs. baseline fraud rate</h2>
+      <div className="rounded-lg border border-border bg-bg-surface p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Current vs. baseline fraud rate</h2>
         <FraudRateComparisonChart
           currentRate={data.current_fraud_rate}
           baselineRate={data.baseline_fraud_rate}
@@ -106,19 +109,19 @@ export function FraudSpike() {
         />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Alert history</h2>
+      <div className="rounded-lg border border-border bg-bg-surface p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Alert history</h2>
         {data.recent_alerts.length === 0 ? (
-          <p className="mt-3 text-sm text-[#52514e]">No spike alerts have been triggered yet.</p>
+          <p className="mt-3 text-sm text-text-secondary">No spike alerts have been triggered yet.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-[#e1e0d9]">
+          <ul className="mt-3 divide-y divide-border">
             {data.recent_alerts.map((alert) => (
               <li key={alert.alert_id} className="flex flex-wrap items-start justify-between gap-4 py-3 text-sm">
                 <div>
                   <SeverityBadge severity={alert.severity} />
-                  <p className="mt-1 text-[#0b0b0b]">{alert.description}</p>
+                  <p className="mt-1 text-text-primary">{alert.description}</p>
                 </div>
-                <span className="shrink-0 text-xs text-[#898781]">{formatTimestamp(alert.created_at)}</span>
+                <span className="shrink-0 font-mono text-xs text-text-muted">{formatTimestamp(alert.created_at)}</span>
               </li>
             ))}
           </ul>

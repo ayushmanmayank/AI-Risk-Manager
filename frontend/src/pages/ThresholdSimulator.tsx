@@ -60,30 +60,30 @@ export function ThresholdSimulator() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold text-[#0b0b0b]">Threshold Simulator</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[#52514e]">
+        <h1 className="font-display text-lg font-semibold text-text-primary">Threshold Simulator</h1>
+        <p className="mt-1 max-w-2xl text-sm text-text-secondary">
           Shows what would happen at any decision threshold, computed against the{' '}
-          <strong className="text-[#0b0b0b]">validation set's</strong> pre-scored predictions
-          (Day 1/2's held-out validation split) -- <strong className="text-[#0b0b0b]">not live
+          <strong className="text-text-primary">validation set's</strong> pre-scored predictions
+          (Day 1/2's held-out validation split) -- <strong className="text-text-primary">not live
           traffic</strong>. Move the slider to see the tradeoff.
         </p>
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-4 text-sm text-[#52514e]">
-        <strong className="text-[#0b0b0b]">The core tradeoff:</strong> a{' '}
-        <strong className="text-[#0b0b0b]">lower</strong> threshold catches more fraud but flags
+      <div className="rounded-lg border border-border bg-bg-surface p-4 text-sm text-text-secondary">
+        <strong className="text-text-primary">The core tradeoff:</strong> a{' '}
+        <strong className="text-text-primary">lower</strong> threshold catches more fraud but flags
         more legitimate transactions too (more customer friction / false positives). A{' '}
-        <strong className="text-[#0b0b0b]">higher</strong> threshold reduces that friction but
+        <strong className="text-text-primary">higher</strong> threshold reduces that friction but
         misses more fraud. No threshold improves both at once -- the slider below trades one for
         the other.
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
+      <div className="rounded-lg border border-border bg-bg-surface p-6">
         <div className="flex items-center justify-between">
-          <label htmlFor="threshold-slider" className="text-sm font-medium text-[#0b0b0b]">
+          <label htmlFor="threshold-slider" className="text-sm font-medium text-text-primary">
             Risk threshold
           </label>
-          <span className="text-2xl font-semibold text-[#0b0b0b]">{threshold.toFixed(2)}</span>
+          <span className="font-mono text-2xl font-semibold tabular-nums text-text-primary">{threshold.toFixed(2)}</span>
         </div>
         <input
           id="threshold-slider"
@@ -93,9 +93,9 @@ export function ThresholdSimulator() {
           step={0.01}
           value={threshold}
           onChange={(event) => setThreshold(Number(event.target.value))}
-          className="mt-3 w-full accent-[#2a78d6]"
+          className="mt-3 w-full accent-accent focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-4"
         />
-        <div className="mt-1 flex justify-between text-xs text-[#898781]">
+        <div className="mt-1 flex justify-between text-xs text-text-muted">
           <span>0.00 -- flag everything</span>
           <span>1.00 -- flag almost nothing</span>
         </div>
@@ -126,15 +126,15 @@ export function ThresholdSimulator() {
         />
       </div>
 
-      <div className="rounded-lg border border-[#e1e0d9] bg-[#fcfcfb] p-6">
-        <h2 className="text-base font-semibold text-[#0b0b0b]">Precision / recall vs. threshold</h2>
-        <p className="mt-1 text-xs text-[#898781]">Dashed line marks the current slider position.</p>
+      <div className="rounded-lg border border-border bg-bg-surface p-6">
+        <h2 className="font-display text-base font-semibold text-text-primary">Precision / recall vs. threshold</h2>
+        <p className="mt-1 text-xs text-text-muted">Dashed line marks the current slider position.</p>
         {curveError ? (
-          <p className="mt-3 text-sm text-[#d03b3b]">Couldn't load the curve: {curveError}</p>
+          <p className="mt-3 text-sm text-risk-high">Couldn't load the curve: {curveError}</p>
         ) : curve ? (
           <PrecisionRecallCurveChart points={curve} currentThreshold={debouncedThreshold} />
         ) : (
-          <div className="mt-3 h-[280px] animate-pulse rounded-lg bg-[#f0efec]" />
+          <div className="mt-3 h-[280px] animate-pulse rounded-lg bg-bg-surface-raised" />
         )}
       </div>
     </div>

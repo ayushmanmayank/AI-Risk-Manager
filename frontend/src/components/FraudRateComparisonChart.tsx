@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TooltipContentProps } from 'recharts';
-import { GRIDLINE, SEVERITY_COLOR, TEXT_MUTED, TEXT_PRIMARY } from '../theme/colors';
+import { BASELINE_COLOR, GRIDLINE, SEVERITY_COLOR, TEXT_MUTED, TEXT_PRIMARY } from '../theme/colors';
 import type { AlertSeverity } from '../types/api';
 
 interface FraudRateComparisonChartProps {
@@ -8,8 +8,6 @@ interface FraudRateComparisonChartProps {
   baselineRate: number;
   severity: AlertSeverity;
 }
-
-const BASELINE_COLOR = '#898781'; // muted/neutral -- "the norm", not a status color
 
 function formatRatePercent(value: string | number | boolean | null | undefined): string {
   return `${(Number(value ?? 0) * 100).toFixed(2)}%`;
@@ -20,9 +18,9 @@ function ChartTooltip({ active, payload }: TooltipContentProps) {
   const point = payload[0];
   const label = (point.payload as { label: string }).label;
   return (
-    <div className="rounded-md border border-[#e1e0d9] bg-[#fcfcfb] px-3 py-2 text-sm shadow-sm">
-      <span className="font-semibold text-[#0b0b0b]">{label}</span>
-      <span className="ml-2 text-[#52514e]">{formatRatePercent(Number(point.value))} HIGH-risk</span>
+    <div className="rounded-md border border-border bg-bg-surface px-3 py-2 text-sm">
+      <span className="font-semibold text-text-primary">{label}</span>
+      <span className="ml-2 font-mono text-text-secondary">{formatRatePercent(Number(point.value))} HIGH-risk</span>
     </div>
   );
 }
@@ -50,7 +48,7 @@ export function FraudRateComparisonChart({ currentRate, baselineRate, severity }
           tick={{ fill: TEXT_MUTED, fontSize: 12 }}
         />
         <Tooltip content={(props) => <ChartTooltip {...props} />} cursor={{ fill: GRIDLINE, opacity: 0.4 }} />
-        <Bar dataKey="rate" barSize={64} radius={[4, 4, 0, 0]} minPointSize={2}>
+        <Bar dataKey="rate" barSize={64} radius={[4, 4, 0, 0]} minPointSize={2} isAnimationActive={false}>
           <Cell fill={BASELINE_COLOR} />
           <Cell fill={SEVERITY_COLOR[severity]} />
           <LabelList dataKey="rate" position="top" formatter={formatRatePercent} fill={TEXT_PRIMARY} fontSize={13} fontWeight={600} />

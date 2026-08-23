@@ -1,1 +1,42 @@
 @import "tailwindcss";
+
+/**
+ * UI redesign (feature/ui-redesign) design tokens -- visual system only,
+ * no app logic here. See src/theme/colors.ts for the JS-side mirror of
+ * the same palette (used for chart/SVG props Tailwind classes can't reach).
+ *
+ * Palette reasoning (see the approved design plan): a real dark ink
+ * background (not pure black), a muted brass accent chosen specifically
+ * to avoid both the generic blue/purple SaaS default AND a "crypto gold"
+ * cliché, and three risk-tier colors used identically everywhere they
+ * appear (badges, charts, the Risk Meter). The accent is deliberately
+ * the most desaturated color in the system so risk-tier colors always
+ * visually dominate over UI chrome.
+ */
+@theme {
+  --color-bg-base: #0b0c0f;
+  --color-bg-surface: #16181d;
+  --color-bg-surface-raised: #1c1f26;
+  --color-border: #262931;
+
+  --color-text-primary: #edeef0;
+  --color-text-secondary: #9498a0;
+  --color-text-muted: #6b6f78;
+
+  --color-accent: #a68a5b;
+
+  --color-risk-low: #3fa66b;
+  --color-risk-medium: #db8a3f;
+  --color-risk-high: #c75450;
+
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
