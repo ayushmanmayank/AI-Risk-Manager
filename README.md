@@ -29,7 +29,8 @@ document.
 8. [API endpoint reference](#api-endpoint-reference)
 9. [Model performance (real, audited test-set numbers)](#model-performance-real-audited-test-set-numbers)
 10. [Known limitations](#known-limitations-stated-honestly)
-11. [Tech stack](#tech-stack)
+11. [Production considerations](#production-considerations-engineering-judgment-not-implementation)
+12. [Tech stack](#tech-stack)
 
 ## Problem statement alignment
 
@@ -546,6 +547,87 @@ caution than the fraud model's.
   [§9](#model-performance-real-audited-test-set-numbers) for the full
   caveat as shown in the running app itself, not just here.
 
+## Production considerations (engineering judgment, not implementation)
+
+Everything above describes what was actually built and verified for this
+submission. This section is different on purpose: **documented engineering
+judgment about how this would need to change to run at real production
+scale — on paper only, nothing here is implemented.** Two small pieces of
+*hardening* (not full production-scale rework) were added in Tier 4 —
+basic rate limiting and a short-TTL response cache, both described
+honestly below, including exactly where their current form stops being
+enough.
+
+**What Tier 4 actually added, and its explicit limit.** `POST /predict`
+now enforces a configurable per-IP rate limit (`PREDICT_RATE_LIMIT_PER_MINUTE`,
+default 200/min -- deliberately not the more obvious "60/min": that broke
+`scripts/reset_demo_data.py`'s own legitimate 68-call seeding run when
+first tested live, and two consecutive reset runs is 136 calls, so 200
+was chosen with real margin, not just picked to look conventional) via a
+small hand-rolled in-memory sliding-window limiter
+(`api/services/rate_limiter.py`), and `GET /analytics` is backed by a
+short in-memory TTL cache (`ANALYTICS_CACHE_TTL_SECONDS`, default 5s,
+`api/services/ttl_cache.py`). Both were deliberately hand-rolled instead
+of pulling in `slowapi`/Redis — no new dependency, easy to unit-test
+deterministically, and consistent with this project's existing "don't add
+a dependency to solve a problem a few dozen lines solves just as well"
+calls (see `src/monitoring/drift_detector.py`'s PSI-over-KS-test reasoning
+and `src/anomaly/spike_detector.py`'s hand-rolled z-test). **The explicit
+cost of that choice**: both live in one process's memory. They are
+correct for this project's actual deployment (one uvicorn process, no
+`--workers` flag — see the `Dockerfile`), but a second replica would track
+its own separate rate-limit counts and its own separate cache, silently
+defeating both the moment this runs behind a load balancer with more than
+one instance. That gap is the first thing addressed below, not hidden.
+
+**Horizontal scaling.** Run multiple API replicas behind a load balancer
+(any of: a managed load balancer, nginx/Envoy, or a Kubernetes Service).
+This requires moving the two pieces of state above out of process memory
+and into something every replica shares:
+- **Rate limiting → Redis**, using `INCR` + `EXPIRE` (or a sorted-set
+  version of the same sliding-window log this project already implements
+  in-memory) so the limit is enforced against total traffic across all
+  replicas, not per-replica.
+- **Analytics cache → Redis** (or a CDN/edge cache in front of read-heavy
+  GET endpoints), so a cache hit on one replica is a cache hit for every
+  replica, and a cache invalidation is visible everywhere at once.
+
+**Database: SQLite → PostgreSQL.** SQLite's single-writer model is fine
+for one process on one machine (this project's actual deployment) but
+does not hold up under concurrent writes from multiple API replicas.
+Postgres (or a managed equivalent — RDS, Cloud SQL, etc.) gives real
+concurrent-write support, connection pooling, and point-in-time recovery.
+The SQLAlchemy layer this project already uses (`api/services/db.py`,
+`db_models.py`) is the one piece of this migration that's already
+decoupled from the specific database — swapping the connection string and
+adding a migration tool (Alembic) is the real remaining work, not a
+rewrite of the ORM layer.
+
+**Containerized deployment: Docker Compose → an orchestrator.** This
+project's `docker-compose.yml` is correctly scoped for local/single-host
+demo use — it is not a production deployment topology. A real deployment
+would package the same images (built via the same `Dockerfile`s, no
+change needed there) and run them under Kubernetes (with a Horizontal Pod
+Autoscaler keyed on request rate or CPU, and the existing `/health`
+endpoint wired to liveness/readiness probes — it already reports model-
+loaded and DB-reachable, exactly what a probe needs) or a managed
+container service (ECS/Fargate, Cloud Run, Azure Container Apps) if
+running your own Kubernetes control plane isn't worth the operational
+cost at the actual traffic level.
+
+**Other real gaps this project states rather than papers over**, in
+addition to the ones already named in Known Limitations above: no
+authentication or per-caller API keys today (anyone who can reach the
+port can call `/predict`); no request/response payload size limits beyond
+what FastAPI/Pydantic validate structurally; the model is loaded into
+every process's own memory rather than served from a dedicated inference
+service, which is fine at this project's scale (the model file is ~600KB)
+but would be revisited if the model ever grew large enough that loading
+it per-replica became the actual bottleneck; and structured request
+logging exists (`api/main.py`'s logging middleware) but there is no
+metrics/tracing pipeline (Prometheus + Grafana, or a hosted APM) wired up
+to actually alert on the kind of thing that middleware logs.
+
 ## Tech stack
 
 **Backend:** Python, FastAPI, Pydantic, SQLAlchemy + SQLite, uvicorn.
@@ -554,6 +636,7 @@ caution than the fraud model's.
 Router.
 **Infra:** Docker (multi-stage builds, nginx for the static frontend),
 Docker Compose.
-**Testing:** pytest (44 tests across the risk engine, API, anomaly
-detector, model-info endpoint, threshold-simulator endpoint, and evidence
-engine).
+**Testing:** pytest (103 tests across the risk engine, API, anomaly
+detector, drift detector, rate limiter, analytics cache, model-info
+endpoints, threshold-simulator endpoint, evidence engine, and the
+problem-statement mapping page's live-metrics contract).
