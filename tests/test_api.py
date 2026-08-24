@@ -192,3 +192,57 @@ def test_analytics_reflects_scored_transactions(client):
     assert body["total_transactions"] == 2
     assert sum(body["count_by_risk_tier"].values()) == 2
     assert sum(body["count_by_decision"].values()) == 2
+
+
+# ---------------------------------------------------------------------
+# Tier 4: pagination robustness (GET /api/v1/transactions).
+# ---------------------------------------------------------------------
+
+
+def test_pagination_at_maximum_allowed_limit_does_not_error(client):
+    for i in range(15):
+        client.post("/api/v1/predict", json=_valid_payload(Time=float(i)))
+
+    # 200 is the documented maximum (see Query(..., le=200) in
+    # api/routes/transactions.py) -- must work cleanly even with far
+    # fewer real rows than that, returning everything available rather
+    # than erroring on an under-full page.
+    response = client.get("/api/v1/transactions", params={"limit": 200, "offset": 0})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 15
+    assert len(body["items"]) == 15
+    assert body["limit"] == 200
+
+
+def test_pagination_limit_above_maximum_is_rejected_not_silently_clamped(client):
+    # The boundary itself must be enforced (422), not silently accepted
+    # and clamped -- an unbounded limit is exactly the kind of thing that
+    # "degrades" a real deployment under a large table.
+    response = client.get("/api/v1/transactions", params={"limit": 500, "offset": 0})
+    assert response.status_code == 422
+
+
+def test_pagination_with_offset_far_beyond_total_rows_returns_empty_not_error(client):
+    client.post("/api/v1/predict", json=_valid_payload())
+
+    # A huge, nonsensical offset (nowhere near the actual row count) must
+    # degrade gracefully to an empty page with the correct total still
+    # reported -- not a 500, not a negative-length slice, not a hang.
+    response = client.get("/api/v1/transactions", params={"limit": 50, "offset": 1_000_000})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["total"] == 1  # the real count, unaffected by the huge offset
+    assert body["offset"] == 1_000_000
+
+
+def test_pagination_large_limit_and_large_offset_combined(client):
+    for i in range(20):
+        client.post("/api/v1/predict", json=_valid_payload(Time=float(100 + i)))
+
+    response = client.get("/api/v1/transactions", params={"limit": 200, "offset": 999_999})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["total"] == 20

@@ -16,6 +16,8 @@ feedback/labeling endpoint exists to record actual outcomes.
 
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -23,6 +25,7 @@ from sqlalchemy.orm import Session
 from api.schemas.prediction import AnalyticsOut
 from api.services.db import get_db
 from api.services.db_models import PredictionRecord
+from api.services.ttl_cache import TTLCache
 
 router = APIRouter()
 
@@ -32,9 +35,16 @@ HIGH_TIER_FRAUD_RATE_NOTE = (
     "endpoint to populate confirmed fraud outcomes per transaction_id."
 )
 
+# Configurable via ANALYTICS_CACHE_TTL_SECONDS. Short on purpose: this
+# endpoint backs the Dashboard, which users expect to reflect a just-sent
+# prediction quickly -- see the Tier 4 report for the measured before/
+# after this actually buys. A single cached value with no key is correct
+# here because the response has no per-request parameters to vary by.
+ANALYTICS_CACHE_TTL_SECONDS = float(os.environ.get("ANALYTICS_CACHE_TTL_SECONDS", "5"))
+analytics_cache: TTLCache[AnalyticsOut] = TTLCache(ttl_seconds=ANALYTICS_CACHE_TTL_SECONDS)
 
-@router.get("/analytics", response_model=AnalyticsOut)
-def analytics(db: Session = Depends(get_db)) -> AnalyticsOut:
+
+def _compute_analytics(db: Session) -> AnalyticsOut:
     total = db.scalar(select(func.count()).select_from(PredictionRecord)) or 0
 
     tier_rows = db.execute(
@@ -57,3 +67,8 @@ def analytics(db: Session = Depends(get_db)) -> AnalyticsOut:
         high_tier_fraud_rate=None,
         high_tier_fraud_rate_note=HIGH_TIER_FRAUD_RATE_NOTE,
     )
+
+
+@router.get("/analytics", response_model=AnalyticsOut)
+def analytics(db: Session = Depends(get_db)) -> AnalyticsOut:
+    return analytics_cache.get(lambda: _compute_analytics(db))
