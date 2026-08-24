@@ -19,17 +19,24 @@
  *                                   without needing a second hue)
  *   alert  ("needs attention")  -> --color-accent          (the one signal)
  *
- * This is why RISK_TIER_COLOR/DECISION_COLOR/SEVERITY_COLOR below only
- * ever resolve to one of THREE values total, not a rainbow of per-tier
- * hues like the prior system had. Badge.tsx additionally varies dot-fill
- * and font-weight by level -- see SIGNAL_LEVEL below -- so the
- * distinction is genuinely encoded in form, not just a duller color.
+ * This is why RISK_TIER_COLOR/SEVERITY_COLOR below only ever resolve to
+ * one of THREE values total, not a rainbow of per-tier hues like the
+ * prior system had (decisions map onto the same three via DECISION_LEVEL,
+ * but nothing renders a decision as a raw color, so there's no
+ * DECISION_COLOR export -- see that map's own comment). Badge.tsx
+ * additionally varies dot-fill and font-weight by level -- see
+ * SIGNAL_LEVEL below -- so the distinction is genuinely encoded in form,
+ * not just a duller color.
  */
 
 export type SignalLevel = 'quiet' | 'noted' | 'alert';
 
 export const TEXT_PRIMARY = '#16161a';
-export const TEXT_SECONDARY = '#6e6b72';
+// Not exported -- no external call site needs the light-surface secondary
+// color as a raw value anymore (the ones that used to have all moved to
+// TEXT_SECONDARY_ON_DARK once their card went dark). Still needed here
+// internally, as SIGNAL_LEVEL_COLOR/SERIES_COLOR's "quiet"/"recall" value.
+const TEXT_SECONDARY = '#6e6b72';
 export const TEXT_MUTED = '#9c98a0';
 
 /** The one reserved accent -- HIGH risk / active alert, nowhere else in
@@ -71,11 +78,9 @@ export const DECISION_LEVEL: Record<'ALLOW' | 'REVIEW' | 'HOLD', SignalLevel> = 
   REVIEW: 'noted',
   HOLD: 'alert',
 };
-export const DECISION_COLOR: Record<'ALLOW' | 'REVIEW' | 'HOLD', string> = {
-  ALLOW: SIGNAL_LEVEL_COLOR[DECISION_LEVEL.ALLOW],
-  REVIEW: SIGNAL_LEVEL_COLOR[DECISION_LEVEL.REVIEW],
-  HOLD: SIGNAL_LEVEL_COLOR[DECISION_LEVEL.HOLD],
-};
+// No DECISION_COLOR (resolved-color) export here, unlike RISK_TIER_COLOR/
+// SEVERITY_COLOR below -- nothing in the app renders a decision as a raw
+// color value; DecisionBadge (Badge.tsx) reads DECISION_LEVEL directly.
 
 /** Alert severity is a 4-step scale but there are only 3 form-levels.
  * NONE and LOW both fold into "quiet" (their own label text -- "NONE" vs
@@ -115,7 +120,6 @@ export const SERIES_COLOR = {
 export const BASELINE_COLOR = '#b5b1a8';
 
 export const GRIDLINE = '#e2dfda';
-export const CHART_SURFACE = '#f1efea';
 
 /**
  * DARK-SURFACE VARIANT (nav/header + Dashboard's cards, per the specific
@@ -144,7 +148,8 @@ export const ACCENT_ON_DARK = '#e65a42';
 export const GRIDLINE_ON_DARK = '#2c2c32';
 
 /** The on-dark equivalent of SIGNAL_LEVEL_COLOR (and, downstream,
- * RISK_TIER_COLOR/DECISION_COLOR/SEVERITY_COLOR/DRIFT_STATUS_COLOR) --
+ * RISK_TIER_COLOR/SEVERITY_COLOR/DRIFT_STATUS_COLOR -- no DECISION_COLOR
+ * equivalent, same reason as the light-surface version above) --
  * needed everywhere a level color is used as a raw value (Recharts fills/
  * strokes, a badge's inline color, RiskMeter's fill) INSIDE a dark card,
  * since none of those are var()-based and so don't pick up card-dark's
@@ -167,11 +172,9 @@ export const RISK_TIER_COLOR_ON_DARK: Record<'LOW' | 'MEDIUM' | 'HIGH', string> 
   HIGH: SIGNAL_LEVEL_COLOR_ON_DARK[RISK_TIER_LEVEL.HIGH],
 };
 
-export const DECISION_COLOR_ON_DARK: Record<'ALLOW' | 'REVIEW' | 'HOLD', string> = {
-  ALLOW: SIGNAL_LEVEL_COLOR_ON_DARK[DECISION_LEVEL.ALLOW],
-  REVIEW: SIGNAL_LEVEL_COLOR_ON_DARK[DECISION_LEVEL.REVIEW],
-  HOLD: SIGNAL_LEVEL_COLOR_ON_DARK[DECISION_LEVEL.HOLD],
-};
+// No DECISION_COLOR_ON_DARK either, matching DECISION_COLOR's absence
+// above -- same reason: nothing renders a decision as a raw color value,
+// dark surface or not.
 
 export const SEVERITY_COLOR_ON_DARK: Record<'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', string> = {
   NONE: SIGNAL_LEVEL_COLOR_ON_DARK[SEVERITY_LEVEL.NONE],
@@ -180,14 +183,8 @@ export const SEVERITY_COLOR_ON_DARK: Record<'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', 
   HIGH: SIGNAL_LEVEL_COLOR_ON_DARK[SEVERITY_LEVEL.HIGH],
 };
 
-/** The dark surface itself (nav rail + card-dark background) -- same
- * literal value as TEXT_PRIMARY (#16161a), reused as a background rather
- * than a text color, and deliberately its OWN token rather than a
- * reference to TEXT_PRIMARY. index.css's `card-dark` utility needs to set
- * a dark background AND locally redefine --color-text-primary to the
- * on-dark value in the same rule; CSS custom properties resolve to one
- * cascaded value per element regardless of a var()'s position within a
- * rule, so a background that referenced --color-text-primary there would
- * pick up the very redefinition meant only for descendant text, painting
- * the card white instead of black. A standalone token sidesteps that. */
-export const SURFACE_INVERSE = '#16161a';
+// No SURFACE_INVERSE export here -- the dark surface color itself
+// (nav rail + card-dark background) only ever needs to exist as a CSS
+// custom property (--color-surface-inverse in index.css), never as a raw
+// JS value; see that token's own docstring in index.css for why it's a
+// standalone value rather than a var(--color-text-primary) reference.

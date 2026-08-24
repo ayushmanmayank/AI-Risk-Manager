@@ -34,16 +34,13 @@
   --color-text-muted: #9c98a0;
 
   --color-accent: #c4321e;
-  --color-series-secondary: #6e6b72;
 
-  /* RISK_TIER_COLOR/DECISION_COLOR/SEVERITY_COLOR in theme/colors.ts only
-     ever resolve to one of these three values -- kept as separate named
-     tokens here too so Tailwind utility classes (text-risk-high,
-     bg-risk-medium/10, border-risk-low) stay available, but "low"/
-     "medium" are literally just the text-secondary/text-primary neutrals,
-     not a second color system. */
-  --color-risk-low: #6e6b72;
-  --color-risk-medium: #16161a;
+  /* RISK_TIER_COLOR/SEVERITY_COLOR in theme/colors.ts only ever resolve to
+     one of three level colors (quiet/noted/alert); "quiet" and "noted"
+     are just the text-secondary/text-primary neutrals, not a second color
+     system, so only the "alert" one is worth a named token here --
+     text-risk-high, used directly by AsyncState.tsx's ErrorBlock (the one
+     card-shaped element that intentionally stays on the light canvas). */
   --color-risk-high: #c4321e;
 
   /* Typography kept exactly as-is per explicit instruction -- this
