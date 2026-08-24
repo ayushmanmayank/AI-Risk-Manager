@@ -1,99 +1,356 @@
 @import "tailwindcss";
 
 /**
- * UI redesign (feature/ui-redesign), 2nd pass -- dark violet/glow
- * refinement over the first pass's ink/brass palette. Visual system
- * only, no app logic here. See src/theme/colors.ts for the JS-side
- * mirror (chart/SVG props Tailwind classes can't reach).
+ * MONOCHROME/EDITORIAL RE-THEME (feature/ui-remake, design-direction
+ * change) -- full replacement of the prior dark-violet system. See
+ * theme/colors.ts's top-of-file docstring for the full reasoning and
+ * reference trail (Bloomberg Terminal, Mercury, Ramp); this file is the
+ * Tailwind-facing mirror of those same tokens/values.
  *
- * Palette reasoning: a near-black base with a violet undertone (not
- * pure black, not the first pass's neutral ink), a single confident
- * violet accent reserved for UI SIGNAL only (nav active state, focus,
- * links, the "live" indicator, the headline series in a 2-line chart)
- * -- risk-tier colors (LOW/MEDIUM/HIGH) are UNCHANGED from the first
- * pass and never become violet: violet means "look here / interact
- * here," green/orange/red still exclusively mean "how risky is this."
- * Keeping these two color systems separate is what stops the accent
- * from diluting the one set of colors that actually has to be trusted.
+ * Warm off-white base (not sterile white), off-black text (not pure
+ * black). The ONE accent (--color-accent) is reserved exclusively for
+ * HIGH risk tier / active alert states -- see theme/colors.ts's
+ * SIGNAL_LEVEL system for exactly where it is and isn't allowed to appear.
+ *
+ * CARD GEOMETRY (revised): the original pass here used Bloomberg's "zero
+ * rounding, hard borders, no soft shadow" discipline literally. A later
+ * refinement request explicitly reversed the corner/elevation half of
+ * that -- cards now get a genuinely soft corner radius and a low-opacity
+ * drop shadow so they visually lift off the canvas, on every card variant
+ * (`card`, `card-dark`, `card-dense`, `card-dense-dark` all share
+ * --radius-card/--shadow-card now, dense tables included) -- see
+ * --radius-card/--shadow-card below. The reserved-accent discipline and
+ * the off-white-canvas/off-black-card color system are UNCHANGED; only
+ * the corner/elevation language moved.
  */
 @theme {
-  --color-bg-base: #0d0b14;
-  --color-bg-surface: #17141f;
-  --color-bg-surface-raised: #1e1a2b;
-  --color-border: rgba(167, 139, 250, 0.12);
+  --color-bg-base: #fafaf8;
+  --color-bg-surface: #f1efea;
+  --color-bg-surface-raised: #e9e6df;
+  --color-border: #e2dfda;
 
-  --color-text-primary: #edeef0;
-  --color-text-secondary: #9a94ac;
-  --color-text-muted: #6b6478;
+  --color-text-primary: #16161a;
+  --color-text-secondary: #6e6b72;
+  --color-text-muted: #9c98a0;
 
-  --color-accent: #a78bfa;
-  /* Secondary line-chart series color -- deliberately NOT violet (so
-     violet keeps a single meaning per chart) and NOT a risk-tier color
-     (so a 2-series comparison chart never looks like it's encoding risk
-     severity). See PrecisionRecallCurveChart.tsx. */
-  --color-series-secondary: #7c8b9e;
+  --color-accent: #c4321e;
+  --color-series-secondary: #6e6b72;
 
-  --color-risk-low: #3fa66b;
-  --color-risk-medium: #db8a3f;
-  --color-risk-high: #c75450;
+  /* RISK_TIER_COLOR/DECISION_COLOR/SEVERITY_COLOR in theme/colors.ts only
+     ever resolve to one of these three values -- kept as separate named
+     tokens here too so Tailwind utility classes (text-risk-high,
+     bg-risk-medium/10, border-risk-low) stay available, but "low"/
+     "medium" are literally just the text-secondary/text-primary neutrals,
+     not a second color system. */
+  --color-risk-low: #6e6b72;
+  --color-risk-medium: #16161a;
+  --color-risk-high: #c4321e;
 
+  /* Typography kept exactly as-is per explicit instruction -- this
+     re-theme is a color/layout/accent-reservation change only, not a
+     type change. Space Grotesk/IBM Plex Sans/IBM Plex Mono, unchanged
+     from the prior pass. */
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* --radius-control (buttons/inputs/badges/selects) stays a tight,
+     functional-control radius -- this refinement is scoped to CARDS, not
+     the whole control language. --radius-card is now a genuinely soft,
+     modern 18px (mid the requested 16-20px range) shared by every card
+     variant. --shadow-card is a two-layer "popped up" shadow (a tight
+     near-contact layer plus a soft ambient bloom) so cards read as
+     lifted off the off-white canvas rather than flush with it; both
+     layers use the off-black text color at low opacity rather than pure
+     black, matching the rest of this palette's "off-black, not black"
+     discipline. */
+  --radius-control: 0.125rem;
+  --radius-card: 1.125rem;
+  /* Third "pop" pass -- an even closer contact shadow, a bigger/softer
+     ambient bloom, PLUS a third glow layer that spreads the accent
+     outward from the card's own edge (0-offset, wide blur, low opacity)
+     so the orange doesn't stop at the hairline border -- it bleeds a
+     little into the canvas around the card. --shadow-card-hover is the
+     same recipe turned up further, paired with a small upward
+     `translateY(-4px)` on the card rule itself (each card utility below)
+     so hovering genuinely lifts the card off the canvas, not just its
+     shadow -- both are reverted under prefers-reduced-motion. */
+  --shadow-card: 0 3px 6px rgba(22, 22, 26, 0.10), 0 20px 48px rgba(22, 22, 26, 0.22),
+    0 0 28px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --shadow-card-hover: 0 4px 8px rgba(22, 22, 26, 0.12), 0 26px 60px rgba(22, 22, 26, 0.26),
+    0 0 40px color-mix(in srgb, var(--color-accent) 24%, transparent);
+  --shadow-popover: 0 4px 16px -4px rgba(22, 22, 26, 0.22);
+
+  /* Dark-surface variant (nav/header + Dashboard's cards, per the layout
+     revision) -- see theme/colors.ts's matching JS exports for the exact
+     WCAG contrast numbers behind each of these. */
+  --color-text-primary-on-dark: #fafaf8;
+  --color-text-secondary-on-dark: #a8a5ac;
+  --color-text-muted-on-dark: #8e8a92;
+  --color-accent-on-dark: #e65a42;
+  --color-bg-surface-raised-on-dark: #232328;
+  --color-border-on-dark: #2c2c32;
+
+  /* The dark surface color itself (nav rail + card-dark background) -- a
+     standalone token, same literal value as --color-text-primary
+     (#16161a), NOT a var() reference to it. See theme/colors.ts's
+     SURFACE_INVERSE docstring: card-dark's rule below both paints this
+     background AND locally redefines --color-text-primary for its
+     descendants, and custom properties resolve to one cascaded value per
+     element regardless of a var()'s position within a rule -- so a
+     background that pointed at --color-text-primary would end up reading
+     its own redefinition (near-white) instead of black. */
+  --color-surface-inverse: #16161a;
 }
 
-/* Reusable card finish -- hairline violet-tinted border + a soft,
-   downward-only ambient shadow (NOT a bright bloom: kept to a low
-   opacity/tight spread on purpose, see the design plan's self-critique
-   on staying "serious tool," not "glowing consumer app"). 16px radius
-   for hero/content cards. */
+/* Reusable card finish -- hairline border, soft 18px corners, a low-
+   opacity drop shadow lifting it off the canvas. */
 @utility card {
-  border-radius: 1rem;
+  border-radius: var(--radius-card);
   background-color: var(--color-bg-surface);
-  /* Longhand, not the `border` shorthand -- so a page can still compose
-     e.g. `card border-dashed` and have Tailwind's border-style utility
-     win cleanly, instead of fighting a shorthand that also sets style. */
   border-width: 1px;
   border-style: solid;
-  border-color: var(--color-border);
-  box-shadow: 0 1px 24px -8px rgba(167, 139, 250, 0.18);
+  /* A deliberate, uniform accent tint blended into the hairline border --
+     applied identically to every card everywhere, which is what keeps it
+     a branding accent rather than a per-card alert marker (a real alert
+     still has to clear a much higher bar: badge/ring/fill color, not a
+     border tint every card already carries). Kept light/faded (15%, down
+     from an earlier, too-strong 35% pass) -- a visible warm hint on the
+     outer line, not a bold orange rule. See --color-accent's own
+     reservation rule in theme/colors.ts -- this is the one other
+     explicitly-requested decorative exception, alongside the canvas grid
+     below. */
+  border-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-border));
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
 }
 
-/* Same finish, tighter radius (12px) and tighter shadow -- for dense
-   table containers, which should read as structured/dense rather than
-   soft, even within the same visual system. */
+/* The dark-card layout revision, opted into via `card-dark` instead of
+   `card` -- now used on all 9 pages, not just Dashboard's original
+   preview. Off-black background (the same token as the nav rail -- see
+   Layout.tsx), hairline border in a dark-appropriate tone. The
+   `--color-text-*`, `--color-bg-surface-raised`, `--color-border`, and
+   `--color-bg-surface` custom properties are all redefined LOCALLY within
+   this rule, so any descendant already using the ordinary
+   `text-text-primary`/`text-text-secondary`/`text-text-muted`/
+   `bg-bg-surface-raised`/`border-border`/`divide-border`/`bg-bg-surface`
+   Tailwind utilities automatically resolves to the correct on-dark value
+   via normal CSS custom-property cascade -- no JSX changes needed for
+   StatCard, ConfusionMatrix, table dividers/hover states, etc.
+   `--color-bg-surface` maps to --color-surface-inverse (not the raised
+   tone) deliberately, mirroring the light system's own precedent: `.card`
+   sets its OWN background from --color-bg-surface, and any bg-bg-surface
+   descendant (ConfusionMatrix's Cell) ends up the same tone as its
+   ambient card, distinguished only by its border -- this keeps that same
+   relationship on dark cards instead of introducing a new one.
+   Elements that take a raw hex prop instead of a Tailwind class/CSS var
+   (Recharts fills/strokes, a badge's inline color, RiskMeter's fill) are
+   NOT covered by this cascade and take an explicit `onDark` prop instead
+   -- see theme/colors.ts's *_COLOR_ON_DARK maps. */
+@utility card-dark {
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface-inverse);
+  border-width: 1px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-border-on-dark));
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+  --color-text-primary: var(--color-text-primary-on-dark);
+  --color-text-secondary: var(--color-text-secondary-on-dark);
+  --color-text-muted: var(--color-text-muted-on-dark);
+  --color-bg-surface-raised: var(--color-bg-surface-raised-on-dark);
+  --color-border: var(--color-border-on-dark);
+  --color-bg-surface: var(--color-surface-inverse);
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
+}
+
+/* Same finish as `card` -- dense table containers now share the same
+   soft-radius/elevation language as every other card (an earlier pass
+   deliberately kept these sharp-cornered/flush; this refinement
+   explicitly unifies the corner and shadow treatment across every card
+   variant, dense tables included). `overflow-x-auto` on the wrapping div
+   still handles wide-table scrolling; the radius just rounds the
+   container's own edge now instead of squaring it off. */
 @utility card-dense {
-  border-radius: 0.75rem;
+  border-radius: var(--radius-card);
   background-color: var(--color-bg-surface);
   border-width: 1px;
   border-style: solid;
-  border-color: var(--color-border);
-  box-shadow: 0 1px 16px -8px rgba(167, 139, 250, 0.14);
+  border-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-border));
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
 }
 
-/* Glow for the "headline" series in a 2-line chart (see
-   PrecisionRecallCurveChart.tsx) -- applied via a CSS class rather than
-   Recharts' `style` prop: passing a `style` object directly to `<Line>`
-   was found to silently break the line's own rendering (confirmed live
-   -- the path kept valid geometry/color in the DOM but painted nothing),
-   almost certainly clobbering some internal style Recharts merges onto
-   the same path. A plain class-based rule sidesteps that entirely. */
-.glow-line {
-  filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.6));
+/* card-dense's dark equivalent -- same cascade mechanism as card-dark,
+   used for the two dense data tables (High-Risk Transactions, Chargeback
+   Evidence Center). */
+@utility card-dense-dark {
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface-inverse);
+  border-width: 1px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-border-on-dark));
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+  --color-text-primary: var(--color-text-primary-on-dark);
+  --color-text-secondary: var(--color-text-secondary-on-dark);
+  --color-text-muted: var(--color-text-muted-on-dark);
+  --color-bg-surface-raised: var(--color-bg-surface-raised-on-dark);
+  --color-border: var(--color-border-on-dark);
+  --color-bg-surface: var(--color-surface-inverse);
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
+}
+
+/* Shared entrance/exit for Radix popovers (Tooltip content, Select
+   content) -- unchanged mechanism from the prior pass, recolored. */
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes popover-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.tooltip-content,
+.popover-content {
+  transform-origin: var(--radix-tooltip-content-transform-origin, var(--radix-select-content-transform-origin));
+}
+.tooltip-content[data-state="delayed-open"],
+.tooltip-content[data-state="instant-open"],
+.popover-content[data-state="open"] {
+  animation: popover-in 120ms ease-out;
+}
+.tooltip-content[data-state="closed"],
+.popover-content[data-state="closed"] {
+  animation: popover-out 100ms ease-in;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-content,
+  .popover-content {
+    animation: none !important;
+  }
+  .card,
+  .card-dark,
+  .card-dense,
+  .card-dense-dark {
+    transition: none;
+  }
+  .card:hover,
+  .card-dark:hover,
+  .card-dense:hover,
+  .card-dense-dark:hover {
+    transform: none;
+  }
+}
+
+/* Decorative canvas texture -- a sparse vertical/horizontal line grid
+ * behind the page content, so the off-white canvas reads as designed
+ * rather than blank in the gaps around/between cards. This is a
+ * deliberate, explicitly-requested EXCEPTION to the "accent means HIGH
+ * risk / active alert, nowhere else" rule everywhere else in this app --
+ * it's not a signal, just texture, and it never appears on anything that
+ * could be read as a status (badges, rings, chart fills). Derived from
+ * --color-accent via color-mix() rather than a separately hardcoded rgba
+ * value, so it's literally the same accent used everywhere else, just
+ * diluted -- not a second orange. Applied to <main> only (Layout.tsx),
+ * not body/nav, so it never competes with the nav rail's flat off-black
+ * surface.
+ *
+ * Two layers, both on pseudo-elements (not <main>'s own background) so
+ * the halo can be blurred and animated independently of the crisp lines:
+ *   ::before -- a blurred, lower-opacity copy that pulses (the "glowing
+ *               dimming" breathing effect), like a halo around the lines.
+ *   ::after  -- the crisp, static core lines (thicker/darker than the
+ *               first pass: 2px at 45% accent mix, not 1px at 14%).
+ * ::after is later in paint order than ::before at the same stacking
+ * level, so it naturally renders on top, keeping the core sharp while
+ * the halo breathes underneath. Both sit at z-index:-1 inside this
+ * element's own isolated stacking context, so they stay behind the
+ * card content (position:static, painted after negative-z-index
+ * descendants) without leaking behind the page's own base fill. */
+@utility bg-canvas-grid {
+  position: relative;
+  isolation: isolate;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    /* Thin (1px) hairlines, kept dark/visible via the color-mix
+       percentage rather than line width -- a thicker (2px) pass read as
+       too heavy and was reverted back to thin per follow-up feedback. */
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--color-accent) 45%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--color-accent) 45%, transparent) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  &::before {
+    filter: blur(6px);
+    opacity: 0.35;
+    animation: canvas-grid-glow 5s ease-in-out infinite alternate;
+  }
+
+  &::after {
+    opacity: 0.9;
+  }
+}
+
+@keyframes canvas-grid-glow {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-canvas-grid::before {
+    animation: none;
+    opacity: 0.4;
+  }
 }
 
 body {
   background-color: var(--color-bg-base);
-  /* Very restrained ambient gradient bleed, anchored at two opposite
-     corners of the viewport (not centered behind content) -- reads as
-     studio lighting, not a hero aura. background-attachment: fixed
-     keeps it anchored to the viewport on tall, scrollable pages. */
-  background-image:
-    radial-gradient(ellipse 900px 700px at -10% -15%, rgba(167, 139, 250, 0.07), transparent 60%),
-    radial-gradient(ellipse 900px 700px at 110% 115%, rgba(167, 139, 250, 0.05), transparent 60%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* No gradient bleed -- that was a violet-glow effect specific to the
+     prior dark system. A flat, warm off-white ground is the whole point
+     of this direction (Ramp/Mercury's "warm off-white canvas"). */
 }

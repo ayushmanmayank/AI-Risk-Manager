@@ -1,5 +1,4 @@
-import { DRIFT_STATUS_COLOR, DriftStatusBadge } from './Badge';
-import { ACCENT } from '../theme/colors';
+import { DRIFT_STATUS_COLOR_ON_DARK, DriftStatusBadge } from './Badge';
 import type { DriftReportOut, FeatureDriftOut } from '../types/api';
 
 /** Display-only cap on the bar width -- PSI itself has no fixed upper
@@ -19,7 +18,11 @@ const FEATURE_LABEL: Record<string, string> = {
 };
 
 function DriftFeatureRow({ feature }: { feature: FeatureDriftOut }) {
-  const color = DRIFT_STATUS_COLOR[feature.status];
+  // Always rendered inside this component's own card-dark section below
+  // (never on a light surface anywhere in the app), so the on-dark color
+  // is used directly rather than threaded through as a prop -- see
+  // Badge.tsx's DRIFT_STATUS_COLOR_ON_DARK docstring.
+  const color = DRIFT_STATUS_COLOR_ON_DARK[feature.status];
   const widthPercent = Math.min(100, (feature.psi / PSI_BAR_CAP) * 100);
   return (
     <div className="flex items-center gap-3">
@@ -63,8 +66,7 @@ export function DriftMonitor({ report }: { report: DriftReportOut }) {
             href="https://en.wikipedia.org/wiki/Population_stability_index"
             target="_blank"
             rel="noreferrer"
-            className="underline underline-offset-2"
-            style={{ color: ACCENT }}
+            className="text-text-primary underline underline-offset-2 hover:text-text-secondary"
           >
             Population Stability Index
           </a>{' '}
@@ -72,7 +74,11 @@ export function DriftMonitor({ report }: { report: DriftReportOut }) {
         </p>
       </div>
 
-      <div className="rounded-2xl border-2 border-risk-medium bg-risk-medium/10 p-4 text-sm text-text-primary">
+      {/* A standing disclosure, not a live alert -- deliberately NOT the
+          reserved accent (see the design plan: the accent means "active
+          alert right now," and this banner is always here). Weight
+          (thicker border) carries the emphasis instead of color. */}
+      <div className="rounded-(--radius-card) border-2 border-text-primary bg-bg-surface-raised p-4 text-sm text-text-primary">
         <strong>Read this before trusting these numbers:</strong> with demo/simulator-scale
         traffic, &ldquo;recent live-scored predictions&rdquo; means dozens to a few hundred rows --
         nowhere near what a real deployment would compare against. This section is illustrative
@@ -82,7 +88,7 @@ export function DriftMonitor({ report }: { report: DriftReportOut }) {
       </div>
 
       {report.insufficient_data ? (
-        <div className="card p-6 text-sm text-text-secondary">
+        <div className="card-dark p-6 text-sm text-text-secondary">
           Not enough live-scored traffic yet to compare distributions ({report.live_sample_size} of
           a minimum {report.min_live_sample_size} predictions needed). Score some transactions
           (Dashboard, or <code className="rounded bg-bg-surface-raised px-1 py-0.5 text-xs">
@@ -90,12 +96,12 @@ export function DriftMonitor({ report }: { report: DriftReportOut }) {
           </code>) and refresh this page.
         </div>
       ) : (
-        <div className="card p-6">
+        <div className="card-dark p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-display text-base font-semibold text-text-primary">
               Per-feature drift (PSI)
             </h2>
-            <DriftStatusBadge status={report.overall_status} />
+            <DriftStatusBadge status={report.overall_status} onDark />
           </div>
           <p className="mt-1 text-xs text-text-muted">
             Baseline: {report.features[0]?.reference_sample_size.toLocaleString() ?? '—'} training

@@ -5,6 +5,7 @@ import { ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { PrecisionRecallCurveChart } from '../components/PrecisionRecallCurveChart';
 import type { CurvePoint } from '../components/PrecisionRecallCurveChart';
 import { StatCard } from '../components/StatCard';
+import { Skeleton } from '../components/ui/skeleton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatAmount } from '../utils/format';
 
@@ -59,7 +60,7 @@ export function ThresholdSimulator() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="card-dark p-6">
         <h1 className="font-display text-lg font-semibold text-text-primary">Threshold Simulator</h1>
         <p className="mt-1 max-w-2xl text-sm text-text-secondary">
           Shows what would happen at any decision threshold, computed against the{' '}
@@ -69,7 +70,7 @@ export function ThresholdSimulator() {
         </p>
       </div>
 
-      <div className="card p-4 text-sm text-text-secondary">
+      <div className="card-dark p-4 text-sm text-text-secondary">
         <strong className="text-text-primary">The core tradeoff:</strong> a{' '}
         <strong className="text-text-primary">lower</strong> threshold catches more fraud but flags
         more legitimate transactions too (more customer friction / false positives). A{' '}
@@ -78,7 +79,7 @@ export function ThresholdSimulator() {
         the other.
       </div>
 
-      <div className="card p-6">
+      <div className="card-dark p-6">
         <div className="flex items-center justify-between">
           <label htmlFor="threshold-slider" className="text-sm font-medium text-text-primary">
             Risk threshold
@@ -93,7 +94,7 @@ export function ThresholdSimulator() {
           step={0.01}
           value={threshold}
           onChange={(event) => setThreshold(Number(event.target.value))}
-          className="mt-3 w-full accent-accent focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-4"
+          className="mt-3 w-full accent-accent focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-4"
         />
         <div className="mt-1 flex justify-between text-xs text-text-muted">
           <span>0.00 -- flag everything</span>
@@ -102,39 +103,43 @@ export function ThresholdSimulator() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Precision" value={formatPercent(data.precision)} caption="of flagged, % actually fraud" />
-        <StatCard label="Recall" value={formatPercent(data.recall)} caption="of actual fraud, % caught" />
+        <StatCard onDark label="Precision" value={formatPercent(data.precision)} caption="of flagged, % actually fraud" />
+        <StatCard onDark label="Recall" value={formatPercent(data.recall)} caption="of actual fraud, % caught" />
         <StatCard
+          onDark
           label="False positive rate"
           value={formatPercent(data.false_positive_rate)}
           caption="of legitimate txns, % wrongly flagged"
         />
         <StatCard
+          onDark
           label="Fraud caught"
           value={`${data.fraud_caught_count} / ${data.fraud_caught_count + data.fn}`}
           caption={formatPercent(data.fraud_caught_percent / 100)}
         />
         <StatCard
+          onDark
           label="Transactions affected"
           value={data.transactions_affected_count.toLocaleString()}
           caption={`${data.transactions_affected_percent.toFixed(2)}% of validation set (REVIEW/HOLD)`}
         />
         <StatCard
+          onDark
           label="Expected financial loss"
           value={formatAmount(data.expected_financial_loss)}
           caption={`fp_cost=${data.false_positive_cost}, fn_cost=${data.false_negative_cost} (placeholder units)`}
         />
       </div>
 
-      <div className="card p-6">
+      <div className="card-dark p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Precision / recall vs. threshold</h2>
         <p className="mt-1 text-xs text-text-muted">Dashed line marks the current slider position.</p>
         {curveError ? (
-          <p className="mt-3 text-sm text-risk-high">Couldn't load the curve: {curveError}</p>
+          <p className="mt-3 text-sm text-accent-on-dark">Couldn't load the curve: {curveError}</p>
         ) : curve ? (
-          <PrecisionRecallCurveChart points={curve} currentThreshold={debouncedThreshold} />
+          <PrecisionRecallCurveChart points={curve} currentThreshold={debouncedThreshold} onDark />
         ) : (
-          <div className="mt-3 h-[280px] animate-pulse rounded-2xl bg-bg-surface-raised" />
+          <Skeleton className="mt-3 h-70" />
         )}
       </div>
     </div>

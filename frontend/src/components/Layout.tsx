@@ -15,20 +15,44 @@ const NAV_LINKS = [
   { to: '/chargebacks', label: 'Chargebacks' },
 ];
 
-/** Left icon-rail-style nav (text labels, not icons -- see the redesign's
- * post-build critique for why: real text stays accessible and needs no
- * new icon dependency, while still winning the density/side-rail layout
- * this brief called for). Same NAV_LINKS, same routes, same NavLink
- * active-state logic as before -- purely a visual restructure from a top
- * bar to a side rail, no navigation behavior changed.
+/** Left icon-rail-style nav -- text labels, not icons. This app has one
+ * vertical rail (brand block + links stacked), not a separate horizontal
+ * top bar; the layout-revision brief's "header" and "left nav panel" are
+ * treated as this same rail here (there's nothing else to make dark).
+ *
+ * Off-black rail (--color-surface-inverse -- the same token card-dark
+ * uses for Dashboard's cards, so header/nav/cards genuinely share one
+ * value, not several similar-looking shades), off-white text, EXCEPT:
+ * - the brand block at the very top, which stays the off-white canvas
+ *   color as a deliberate, hard-edged exception (a solid border, not a
+ *   gradient) -- the one bright anchor point in an otherwise dark rail.
+ * - the active nav item's label, which stays off-white (not accent --
+ *   see below for why) with a small accent-colored left-border marker
+ *   indicating current page.
+ *
+ * The active-state accent marker is a border/background wash, not the
+ * link's TEXT color: the real accent (#c4321e) measures only 3.28:1 on
+ * this dark background (fails WCAG AA for normal text, 4.5:1 minimum) --
+ * see theme/colors.ts's ACCENT_ON_DARK docstring. A marker only needs to
+ * clear the 3:1 non-text threshold, which it does, so this keeps the
+ * accent's wayfinding role visible without an under-contrast label.
  */
 export function Layout() {
   return (
     <div className="min-h-screen bg-bg-base font-sans text-text-primary">
       <div className="flex min-h-screen">
-        <nav className="flex w-56 shrink-0 flex-col border-r border-border bg-bg-surface">
-          <div className="border-b border-border px-5 py-5">
-            <span className="font-display text-base font-semibold tracking-tight text-text-primary">
+        <nav className="flex w-56 shrink-0 flex-col border-r border-border-on-dark bg-surface-inverse">
+          {/* A full orange BORDER around this block read as too heavy on
+              follow-up review and was removed -- back to the plain
+              bottom rule matching the rest of the nav's hairlines. The
+              accent branding touch moved onto the wordmark's letters
+              instead: a faded orange glow (text-shadow, not a hard
+              outline) picking up the same accent at low opacity. */}
+          <div className="border-b border-border bg-bg-base px-5 py-5">
+            <span
+              className="font-display text-base font-semibold tracking-tight text-text-primary"
+              style={{ textShadow: '0 0 5px color-mix(in srgb, var(--color-accent) 45%, transparent)' }}
+            >
               AI Risk Manager
             </span>
           </div>
@@ -39,10 +63,10 @@ export function Layout() {
                 to={link.to}
                 end={link.to === '/'}
                 className={({ isActive }) =>
-                  `block rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-2 ${
+                  `block border-l-2 px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary-on-dark)] focus-visible:outline-offset-2 ${
                     isActive
-                      ? 'bg-bg-surface-raised font-medium text-text-primary'
-                      : 'text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary'
+                      ? 'border-accent bg-accent/10 font-medium text-text-primary-on-dark'
+                      : 'border-transparent text-text-secondary-on-dark hover:bg-white/5 hover:text-text-primary-on-dark'
                   }`
                 }
               >
@@ -51,8 +75,19 @@ export function Layout() {
             ))}
           </div>
         </nav>
-        <main className="min-w-0 flex-1 overflow-x-auto px-8 py-8">
-          <Outlet />
+        <main className="min-w-0 flex-1 overflow-x-auto bg-canvas-grid px-8 py-8">
+          {/* Shared, centered content column -- ONE max-width for every
+              page, applied here rather than per-page, so no page can end
+              up with lopsided leftover whitespace on one side (this
+              replaced SubmissionMapping's own ad hoc `max-w-4xl`, which
+              wasn't centered and was the specific case flagged). Pages
+              with genuinely wide content (the two data tables) still get
+              real room -- 1280px comfortably fits their columns while
+              still reading as a bounded, centered page on very wide
+              viewports. */}
+          <div className="mx-auto w-full max-w-7xl">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

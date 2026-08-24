@@ -4,19 +4,22 @@ import { getModelInfo, getReturnModelInfo } from '../api/client';
 import { useApiData } from '../api/hooks';
 import { ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { StatusBadge } from '../components/Badge';
-import { SEVERITY_COLOR } from '../theme/colors';
 import type { ModelInfoOut, ReturnModelInfoOut } from '../types/api';
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+// "Met"/"Built" are good news, not a risk reading -- quiet, same "silence
+// is the signal" logic FlaggedInAdvanceBadge uses for its own good-news
+// case. Never alert: the reserved accent means "needs attention," and a
+// requirement being satisfied is the opposite of that.
 function MetBadge() {
-  return <StatusBadge label="Met" color={SEVERITY_COLOR.NONE} />;
+  return <StatusBadge label="Met" level="quiet" onDark />;
 }
 
 function BuiltBadge() {
-  return <StatusBadge label="Built" color={SEVERITY_COLOR.NONE} />;
+  return <StatusBadge label="Built" level="quiet" onDark />;
 }
 
 function RequirementRow({
@@ -29,7 +32,7 @@ function RequirementRow({
   children: ReactNode;
 }) {
   return (
-    <div className="card flex flex-col gap-2 p-5 sm:flex-row sm:items-start sm:gap-4">
+    <div className="card-dark flex flex-col gap-2 p-5 sm:flex-row sm:items-start sm:gap-4">
       <div className="shrink-0 pt-0.5">{badge}</div>
       <div className="min-w-0">
         <div className="font-display text-sm font-semibold text-text-primary">{title}</div>
@@ -59,15 +62,23 @@ export function SubmissionMapping() {
   const returnModelInfo = useApiData<ReturnModelInfoOut>(getReturnModelInfo);
 
   return (
-    <div className="max-w-4xl space-y-10">
-      <div>
+    <div className="space-y-10">
+      {/* PREVIEW: the "header card" treatment -- the page's top title
+          block promoted from bare canvas text to the same off-black,
+          rounded, elevated surface as every other card, per the layout
+          refinement. See Layout.tsx: this app has no separate horizontal
+          header bar, so (as with the nav-rail preview earlier) this
+          top-of-page title block is what plays that role. Only this one
+          page has it so far -- see the rollout note in this file's
+          top-of-component comment. */}
+      <div className="card-dark p-6">
         <h1 className="font-display text-lg font-semibold text-text-primary">
           Problem Statement Mapping
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-text-secondary">
           A direct map from this project to the hackathon brief -- every number below is fetched
           live from the same endpoints{' '}
-          <Link to="/model-performance" className="underline underline-offset-2">
+          <Link to="/model-performance" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             Model Performance
           </Link>{' '}
           reads from, not a separate hardcoded copy, so it cannot drift out of sync with what you
@@ -86,11 +97,11 @@ export function SubmissionMapping() {
             POST /api/v1/predict
           </code>
           . Every score you see on the{' '}
-          <Link to="/" className="underline underline-offset-2">
+          <Link to="/" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             Dashboard
           </Link>{' '}
           and{' '}
-          <Link to="/high-risk" className="underline underline-offset-2">
+          <Link to="/high-risk" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             High-Risk Transactions
           </Link>{' '}
           comes from this endpoint, not a mock.
@@ -115,7 +126,7 @@ export function SubmissionMapping() {
             </>
           )}{' '}
           Full breakdown, confusion matrix, and methodology on{' '}
-          <Link to="/model-performance" className="underline underline-offset-2">
+          <Link to="/model-performance" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             Model Performance
           </Link>
           .
@@ -132,7 +143,7 @@ export function SubmissionMapping() {
           title="Honest metrics that acknowledge false-positive cost"
         >
           This is this project&apos;s strongest differentiator, not an afterthought: the{' '}
-          <Link to="/threshold-simulator" className="underline underline-offset-2">
+          <Link to="/threshold-simulator" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             Threshold Simulator
           </Link>{' '}
           lets you drag the decision threshold and watch precision/recall trade off live against a
@@ -149,7 +160,7 @@ export function SubmissionMapping() {
         <RequirementRow badge={<BuiltBadge />} title="Fraud-spike detector">
           A live, rolling anomaly detector comparing recent HIGH-risk rate against the model&apos;s
           training-derived baseline. See{' '}
-          <Link to="/fraud-spike" className="underline underline-offset-2">
+          <Link to="/fraud-spike" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             Fraud Spike
           </Link>
           .
@@ -158,7 +169,7 @@ export function SubmissionMapping() {
         <RequirementRow badge={<BuiltBadge />} title="Chargeback evidence responder">
           Built -- deterministic, zero-hallucination automated summary: a Python template filling
           in real fields already visible on the page, not an LLM call. See{' '}
-          <Link to="/chargebacks" className="underline underline-offset-2">
+          <Link to="/chargebacks" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             Chargeback Center
           </Link>
           .
@@ -173,7 +184,7 @@ export function SubmissionMapping() {
             'see Model Performance for the full disclosure'
           )}
           . See{' '}
-          <Link to="/model-performance" className="underline underline-offset-2">
+          <Link to="/model-performance" className="rounded text-text-secondary underline underline-offset-2 transition-colors duration-150 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2">
             Model Performance
           </Link>{' '}
           for the full numbers.

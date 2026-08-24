@@ -19,7 +19,7 @@ export function ChargebackCenter() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="card-dark p-6">
         <h1 className="font-display text-lg font-semibold text-text-primary">Chargeback Evidence Center</h1>
         <p className="mt-1 max-w-2xl text-sm text-text-secondary">
           <strong className="text-text-primary">Chargeback and refund records here are seeded/simulated
@@ -36,7 +36,7 @@ export function ChargebackCenter() {
           description="Run src/evidence/seed_chargebacks.py to seed a handful of simulated chargebacks against real scored transactions."
         />
       ) : (
-        <div className="overflow-x-auto card-dense">
+        <div className="overflow-x-auto card-dense-dark">
           <table className="min-w-full divide-y divide-border text-sm">
             <thead>
               <tr className="text-left text-xs font-medium tracking-wide text-text-muted uppercase">
@@ -64,7 +64,7 @@ export function ChargebackCenter() {
                   <td className="px-4 py-3 text-text-secondary">{item.status}</td>
                   <td className="px-4 py-3">
                     {item.risk_tier_at_scoring ? (
-                      <RiskTierBadge tier={item.risk_tier_at_scoring} />
+                      <RiskTierBadge tier={item.risk_tier_at_scoring} onDark />
                     ) : (
                       <span className="text-xs text-text-muted">no data</span>
                     )}
@@ -73,6 +73,7 @@ export function ChargebackCenter() {
                     <FlaggedInAdvanceBadge
                       flagged={item.was_flagged_in_advance}
                       hasData={item.risk_tier_at_scoring !== null}
+                      onDark
                     />
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-text-secondary">{formatTimestamp(item.timestamp)}</td>

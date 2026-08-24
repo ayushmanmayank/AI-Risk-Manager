@@ -1,5 +1,3 @@
-import { SEVERITY_COLOR } from '../theme/colors';
-
 interface ConfusionMatrixProps {
   tp: number;
   fp: number;
@@ -9,33 +7,25 @@ interface ConfusionMatrixProps {
   positiveLabel?: string;
   /** What the negative class is called, e.g. "Legit" or "Not returned". */
   negativeLabel?: string;
-  /** Whether a missed positive (FN) is asserted to cost more than a false
-   * alarm (FP) -- true only when this project has actually defined that
-   * cost asymmetry for the model being shown (see src/risk/cost_engine.py
-   * for the fraud model's ~20x figure). Defaults to true for backward
-   * compatibility with the fraud model's own usage; any model without an
-   * established cost model (e.g. the Tier 2 return-risk scorer) must pass
-   * false explicitly rather than silently inheriting a cost claim that
-   * was never made for it.
-   */
-  costAsymmetryEstablished?: boolean;
 }
 
-function Cell({ value, label, color }: { value: number; label: string; color: string }) {
+function Cell({ value, label }: { value: number; label: string }) {
   return (
-    <div className="rounded-md border p-4 text-center" style={{ borderColor: color, backgroundColor: `${color}1a` }}>
+    <div className="rounded-(--radius-control) border border-border bg-bg-surface p-4 text-center">
       <div className="font-mono text-lg font-semibold tabular-nums text-text-primary">{value.toLocaleString()}</div>
       <div className="text-xs text-text-secondary">{label}</div>
     </div>
   );
 }
 
-/** Simple 2x2 confusion matrix, reused across models -- see
- * `positiveLabel`/`negativeLabel`/`costAsymmetryEstablished` above for
- * why those are configurable rather than hardcoded to "Fraud"/"Legit":
- * a different model's positive class, and whether its FN/FP severity
- * ordering has any real justification, must never be silently inherited
- * from whichever model happened to use this component first.
+/** Simple 2x2 confusion matrix, reused across models. Deliberately fully
+ * neutral now -- a confusion matrix is a static audit table, not a live
+ * alert, so it doesn't get the reserved accent (see the design plan's
+ * item 5 self-critique: coloring FP/FN cells red would have been exactly
+ * the kind of decorative use this direction exists to eliminate). The
+ * `costAsymmetryEstablished` prop from the prior color-coded version is
+ * gone entirely -- there's no cost-asymmetry color to establish or not
+ * establish anymore, since nothing here is colored either way.
  */
 export function ConfusionMatrix({
   tp,
@@ -44,11 +34,7 @@ export function ConfusionMatrix({
   tn,
   positiveLabel = 'Fraud',
   negativeLabel = 'Legit',
-  costAsymmetryEstablished = true,
 }: ConfusionMatrixProps) {
-  const fpColor = costAsymmetryEstablished ? SEVERITY_COLOR.LOW : SEVERITY_COLOR.NONE;
-  const fnColor = costAsymmetryEstablished ? SEVERITY_COLOR.HIGH : SEVERITY_COLOR.NONE;
-
   return (
     <div className="inline-grid grid-cols-[auto_1fr_1fr] gap-2 text-sm">
       <div />
@@ -60,12 +46,12 @@ export function ConfusionMatrix({
       </div>
 
       <div className="flex items-center px-2 text-xs font-medium text-text-secondary">Actual: {negativeLabel}</div>
-      <Cell value={tn} label="True Negative" color={SEVERITY_COLOR.NONE} />
-      <Cell value={fp} label="False Positive" color={fpColor} />
+      <Cell value={tn} label="True Negative" />
+      <Cell value={fp} label="False Positive" />
 
       <div className="flex items-center px-2 text-xs font-medium text-text-secondary">Actual: {positiveLabel}</div>
-      <Cell value={fn} label="False Negative" color={fnColor} />
-      <Cell value={tp} label="True Positive" color={SEVERITY_COLOR.NONE} />
+      <Cell value={fn} label="False Negative" />
+      <Cell value={tp} label="True Positive" />
     </div>
   );
 }

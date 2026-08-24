@@ -21,9 +21,9 @@ interface RadialRingProps {
  * for exactly the few places a hero-sized single value genuinely fits;
  * dense table rows keep the horizontal RiskMeter (see that component's
  * own docstring) and the confusion-matrix/metric-grid pages stay plain
- * cards -- not every number becomes a ring. Glow is intentionally
- * restrained (drop-shadow at low opacity, not a bright bloom) -- see
- * the design plan's self-critique on staying "serious tool."
+ * cards -- not every number becomes a ring. No glow (removed with the
+ * dark-violet system) -- a flat stroke, consistent with this direction's
+ * "zero rounding, hard borders, no soft shadow" discipline.
  */
 export function RadialRing({ percent, color, size = 96, strokeWidth = 8, label }: RadialRingProps) {
   const clamped = Math.max(0, Math.min(100, percent));
@@ -52,7 +52,7 @@ export function RadialRing({ percent, color, size = 96, strokeWidth = 8, label }
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ filter: `drop-shadow(0 0 5px ${color}80)`, transition: 'stroke-dashoffset 300ms ease-out' }}
+          style={{ transition: 'stroke-dashoffset 300ms ease-out' }}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">{label}</div>

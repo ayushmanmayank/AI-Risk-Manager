@@ -1,4 +1,4 @@
-import { RISK_TIER_COLOR } from '../theme/colors';
+import { RISK_TIER_COLOR, RISK_TIER_COLOR_ON_DARK } from '../theme/colors';
 import type { RiskTier } from '../types/api';
 
 interface RiskMeterProps {
@@ -7,6 +7,13 @@ interface RiskMeterProps {
   /** Compact: inline table-cell use (High-Risk Transactions rows).
    * Default: a larger hero treatment (Transaction Detail, Chargeback evidence). */
   compact?: boolean;
+  /** True on a card-dark/card-dense-dark surface (e.g. High-Risk
+   * Transactions' table). Both the fill and the percentage label are raw
+   * hex passed via inline `style`, not var()-based, so neither picks up
+   * the card's CSS cascade automatically -- and MEDIUM's light-surface
+   * color is literally identical to the dark card background (see
+   * theme/colors.ts), so this isn't optional here. */
+  onDark?: boolean;
 }
 
 // Purely visual reference marks -- these mirror src/risk/decision_engine.py's
@@ -25,9 +32,9 @@ const HIGH_THRESHOLD_PERCENT = 70;
  * let an analyst see at a glance not just "how risky" but "how close to
  * flipping tiers" -- this is why it's more than a generic progress bar.
  */
-export function RiskMeter({ probability, tier, compact = false }: RiskMeterProps) {
+export function RiskMeter({ probability, tier, compact = false, onDark = false }: RiskMeterProps) {
   const fillPercent = Math.max(0, Math.min(100, probability * 100));
-  const color = RISK_TIER_COLOR[tier];
+  const color = onDark ? RISK_TIER_COLOR_ON_DARK[tier] : RISK_TIER_COLOR[tier];
 
   return (
     <div className={`flex items-center gap-3 ${compact ? 'min-w-[140px]' : 'min-w-[220px]'}`}>

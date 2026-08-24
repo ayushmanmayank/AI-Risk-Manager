@@ -5,6 +5,7 @@ import { useApiData } from '../api/hooks';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '../components/AsyncState';
 import { DecisionBadge, RiskTierBadge } from '../components/Badge';
 import { RiskMeter } from '../components/RiskMeter';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import type { Decision, PaginatedTransactions, RiskTier } from '../types/api';
 import { formatAmount, formatTimestamp } from '../utils/format';
 
@@ -52,7 +53,7 @@ export function HighRiskTransactions() {
         <FilterSelect label="Decision" value={decisionFilter} options={DECISION_OPTIONS} onChange={setDecisionFilter} />
       </div>
 
-      <div className="overflow-x-auto card-dense">
+      <div className="overflow-x-auto card-dense-dark">
         <table className="min-w-full divide-y divide-border text-sm">
           <thead>
             <tr className="text-left text-xs font-medium tracking-wide text-text-muted uppercase">
@@ -77,14 +78,14 @@ export function HighRiskTransactions() {
                 </td>
                 <td className="px-4 py-3 font-mono tabular-nums text-text-primary">{formatAmount(item.amount)}</td>
                 <td className="px-4 py-3">
-                  <RiskMeter probability={item.fraud_probability} tier={item.risk_tier} compact />
+                  <RiskMeter probability={item.fraud_probability} tier={item.risk_tier} compact onDark />
                 </td>
                 <td className="px-4 py-3">
-                  <RiskTierBadge tier={item.risk_tier} />
+                  <RiskTierBadge tier={item.risk_tier} onDark />
                 </td>
                 <td className="px-4 py-3 font-mono tabular-nums text-text-primary">{formatAmount(item.expected_loss)}</td>
                 <td className="px-4 py-3">
-                  <DecisionBadge decision={item.decision} />
+                  <DecisionBadge decision={item.decision} onDark />
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-text-secondary">{formatTimestamp(item.timestamp)}</td>
               </tr>
@@ -113,17 +114,18 @@ function FilterSelect<T extends string>({
   return (
     <label className="flex items-center gap-2 text-sm text-text-secondary">
       {label}
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value as T)}
-        className="rounded-md border border-border bg-bg-surface px-2 py-1 text-sm text-text-primary focus-visible:outline-2 focus-visible:outline-[var(--color-accent)] focus-visible:outline-offset-2"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={(next) => onChange(next as T)}>
+        <SelectTrigger className="min-w-24">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </label>
   );
 }

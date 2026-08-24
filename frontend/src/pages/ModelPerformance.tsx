@@ -40,7 +40,10 @@ function ReturnModelSection() {
         </p>
       </div>
 
-      <div className="rounded-2xl border-2 border-risk-medium bg-risk-medium/10 p-4 text-sm text-text-primary">
+      {/* Standing disclosure, not a live alert -- neutral + heavier
+          border weight carries the emphasis, not the reserved accent
+          (same treatment as DriftMonitor's honesty banner). */}
+      <div className="rounded-(--radius-card) border-2 border-text-primary bg-bg-surface-raised p-4 text-sm text-text-primary">
         <strong>Read this before trusting these numbers like the fraud model's:</strong>{' '}
         {data.dataset_honesty_note}
       </div>
@@ -52,21 +55,21 @@ function ReturnModelSection() {
         <StatCard label="Classification threshold" value={data.threshold.toFixed(2)} />
       </div>
 
-      <div className="card p-6">
+      <div className="card-dark p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Test-set metrics</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Precision" value={formatPercent(data.precision)} />
-          <StatCard label="Recall" value={formatPercent(data.recall)} />
-          <StatCard label="F1 score" value={data.f1.toFixed(4)} />
-          <StatCard label="PR-AUC" value={data.pr_auc.toFixed(4)} />
-          <StatCard label="ROC-AUC" value={data.roc_auc.toFixed(4)} />
-          <StatCard label="False positive rate" value={formatPercent(data.false_positive_rate)} />
-          <StatCard label="False negative rate" value={formatPercent(data.false_negative_rate)} />
-          <StatCard label="Test set size" value={data.test_set_size.toLocaleString()} />
+          <StatCard onDark label="Precision" value={formatPercent(data.precision)} />
+          <StatCard onDark label="Recall" value={formatPercent(data.recall)} />
+          <StatCard onDark label="F1 score" value={data.f1.toFixed(4)} />
+          <StatCard onDark label="PR-AUC" value={data.pr_auc.toFixed(4)} />
+          <StatCard onDark label="ROC-AUC" value={data.roc_auc.toFixed(4)} />
+          <StatCard onDark label="False positive rate" value={formatPercent(data.false_positive_rate)} />
+          <StatCard onDark label="False negative rate" value={formatPercent(data.false_negative_rate)} />
+          <StatCard onDark label="Test set size" value={data.test_set_size.toLocaleString()} />
         </div>
       </div>
 
-      <div className="card p-6">
+      <div className="card-dark p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Confusion matrix</h2>
         <p className="mt-1 text-xs text-text-muted">
           {data.test_set_size.toLocaleString()} held-out test orders, at threshold {data.threshold.toFixed(2)}.
@@ -79,7 +82,6 @@ function ReturnModelSection() {
             tn={data.tn}
             positiveLabel="Returned"
             negativeLabel="Not returned"
-            costAsymmetryEstablished={false}
           />
         </div>
       </div>
@@ -115,7 +117,7 @@ export function ModelPerformance() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="card-dark p-6">
         <h1 className="font-display text-lg font-semibold text-text-primary">Model Performance</h1>
         <p className="mt-1 max-w-2xl text-sm text-text-secondary">
           <strong className="text-text-primary">Held-out TEST-set performance</strong> -- the final,
@@ -133,21 +135,21 @@ export function ModelPerformance() {
         <StatCard label="Classification threshold" value={data.threshold.toFixed(2)} />
       </div>
 
-      <div className="card p-6">
+      <div className="card-dark p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Test-set metrics</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Precision" value={formatPercent(data.precision)} />
-          <StatCard label="Recall" value={formatPercent(data.recall)} />
-          <StatCard label="F1 score" value={data.f1.toFixed(4)} />
-          <StatCard label="PR-AUC" value={data.pr_auc.toFixed(4)} />
-          <StatCard label="ROC-AUC" value={data.roc_auc.toFixed(4)} />
-          <StatCard label="False positive rate" value={formatPercent(data.false_positive_rate)} />
-          <StatCard label="False negative rate" value={formatPercent(data.false_negative_rate)} />
-          <StatCard label="Test set size" value={data.test_set_size.toLocaleString()} />
+          <StatCard onDark label="Precision" value={formatPercent(data.precision)} />
+          <StatCard onDark label="Recall" value={formatPercent(data.recall)} />
+          <StatCard onDark label="F1 score" value={data.f1.toFixed(4)} />
+          <StatCard onDark label="PR-AUC" value={data.pr_auc.toFixed(4)} />
+          <StatCard onDark label="ROC-AUC" value={data.roc_auc.toFixed(4)} />
+          <StatCard onDark label="False positive rate" value={formatPercent(data.false_positive_rate)} />
+          <StatCard onDark label="False negative rate" value={formatPercent(data.false_negative_rate)} />
+          <StatCard onDark label="Test set size" value={data.test_set_size.toLocaleString()} />
         </div>
       </div>
 
-      <div className="card p-6">
+      <div className="card-dark p-6">
         <h2 className="font-display text-base font-semibold text-text-primary">Confusion matrix</h2>
         <p className="mt-1 text-xs text-text-muted">
           {data.test_set_size.toLocaleString()} held-out test transactions, at threshold {data.threshold.toFixed(2)}.
@@ -157,7 +159,7 @@ export function ModelPerformance() {
         </div>
       </div>
 
-      <div className="card p-4 text-sm text-text-secondary">
+      <div className="card-dark p-4 text-sm text-text-secondary">
         <strong className="text-text-primary">A note on what's real vs. simulated:</strong> this page's
         numbers come from the actual, audited held-out test set -- real historical transactions,
         scored once, never touched for tuning. The <strong className="text-text-primary">Dashboard</strong>,{' '}
