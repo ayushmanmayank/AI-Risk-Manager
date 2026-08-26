@@ -72,8 +72,8 @@ First, clone the repo and `cd` into it — every command below assumes you're
 running from the project root unless stated otherwise:
 
 ```bash
-git clone https://github.com/ayushmanmayank/razorpay-track-2-.git
-cd razorpay-track-2-
+git clone https://github.com/ayushmanmayank/AI-Risk-Manager.git
+cd AI-Risk-Manager
 ```
 
 ### Option A: Docker (recommended)
