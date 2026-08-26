@@ -41,7 +41,12 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-bg-base font-sans text-text-primary">
       <div className="flex min-h-screen">
-        <nav className="flex w-56 shrink-0 flex-col border-r border-border-on-dark bg-surface-inverse">
+        {/* sticky + h-screen: the rail pins to the viewport instead of
+            scrolling away with tall page content (Model Performance,
+            High-Risk Transactions) -- overflow-y-auto is a defensive
+            fallback (own internal scroll) in case the nav's own content
+            ever outgrows a short viewport; it never needs to today. */}
+        <nav className="sticky top-0 flex h-screen w-56 shrink-0 flex-col overflow-y-auto border-r border-border-on-dark bg-surface-inverse">
           {/* A full orange BORDER around this block read as too heavy on
               follow-up review and was removed -- back to the plain
               bottom rule matching the rest of the nav's hairlines. The
