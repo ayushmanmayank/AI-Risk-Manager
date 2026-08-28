@@ -5,17 +5,33 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Risk Manager</title>
-    <!-- UI redesign (feature/ui-redesign): Space Grotesk for headings,
-         IBM Plex Sans for body, IBM Plex Mono for numbers/IDs/timestamps
-         -- see src/index.css's @theme block. Visual-only, no app logic.
-         (Space Grotesk replaces the first redesign pass's Archivo, per
-         the dark-violet visual refinement.) -->
+    <!-- Dark-gold theme (feature/frontend-final-v3): Space Grotesk for
+         headings, Inter for body, IBM Plex Mono (tabular-nums) for
+         numbers/IDs/timestamps -- see src/index.css's @theme block.
+         Inter replaces the prior direction's IBM Plex Sans as the body
+         face; Space Grotesk/IBM Plex Mono carry over unchanged. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Sets the theme attribute before React loads/paints, so a person
+      // who previously chose light mode doesn't see a flash of the dark
+      // default on first load -- ThemeProvider.tsx re-applies the same
+      // attribute (via useLayoutEffect) once React mounts, this is only
+      // for the gap before that. Matches ThemeProvider's own default
+      // (dark) and storage key exactly.
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('ai-risk-manager-theme');
+          document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'dark');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

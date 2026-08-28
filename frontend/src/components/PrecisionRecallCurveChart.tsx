@@ -1,15 +1,7 @@
 import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TooltipContentProps } from 'recharts';
-import {
-  GRIDLINE,
-  GRIDLINE_ON_DARK,
-  TEXT_MUTED,
-  TEXT_MUTED_ON_DARK,
-  TEXT_PRIMARY,
-  TEXT_PRIMARY_ON_DARK,
-  TEXT_SECONDARY_ON_DARK,
-  SERIES_COLOR,
-} from '../theme/colors';
+import { getPalette, getSeriesColor } from '../theme/colors';
+import { useThemeMode } from '../theme/ThemeProvider';
 
 export interface CurvePoint {
   threshold: number;
@@ -20,10 +12,6 @@ export interface CurvePoint {
 interface PrecisionRecallCurveChartProps {
   points: CurvePoint[];
   currentThreshold: number;
-  /** True on Threshold Simulator's now-dark chart card -- see
-   * RiskTierBarChart's identical `onDark` prop for why Recharts props
-   * need this explicitly (raw hex, not var()-based). */
-  onDark?: boolean;
 }
 
 function formatPercent(value: string | number | boolean | null | undefined): string {
@@ -33,7 +21,7 @@ function formatPercent(value: string | number | boolean | null | undefined): str
 function ChartTooltip({ active, payload, label }: TooltipContentProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-(--radius-control) border border-border bg-bg-surface px-3 py-2 text-sm">
+    <div className="rounded-md border border-border bg-bg-surface-raised px-3 py-2 text-sm">
       <div className="font-mono font-semibold text-text-primary">threshold {Number(label).toFixed(2)}</div>
       {payload.map((entry) => (
         <div key={String(entry.dataKey)} className="font-mono" style={{ color: entry.color }}>
@@ -45,32 +33,23 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps) {
 }
 
 /** Precision & recall across the full 0-1 threshold range -- the core
- * tradeoff this whole page demonstrates. Two series -> a legend, per the
- * dataviz skill's rule that 2+ series always carry one. The current
- * slider position is marked with a vertical reference line so the
- * tradeoff at THIS threshold is visually obvious, not just readable from
- * the stat cards.
- *
- * ZERO accent on this chart, on purpose: this is model-performance data,
- * not risk-tier data, so the reserved signal color doesn't apply here at
- * all (see the design plan's item 5). Precision and recall are
- * differentiated by LINE STYLE instead -- solid (precision, the
- * "headline" metric this page is built around) vs. dashed (recall) --
- * plus a slightly heavier stroke weight on precision, the same
- * type-weight-over-color principle Badge.tsx uses for risk levels,
- * applied to a chart instead of a badge.
+ * tradeoff this page demonstrates. Same color system as the rest of the
+ * app: precision (the page's headline metric) gets the reserved accent;
+ * recall stays neutral, differentiated further by dashed line style. The
+ * current slider position is marked with a vertical reference line
+ * (`.pr-threshold-line` in index.css transitions its x1/x2 smoothly on
+ * every debounced threshold change instead of snapping -- SVG geometry
+ * properties are CSS-transitionable the same way color/opacity are).
  */
-export function PrecisionRecallCurveChart({ points, currentThreshold, onDark = false }: PrecisionRecallCurveChartProps) {
-  const gridline = onDark ? GRIDLINE_ON_DARK : GRIDLINE;
-  const mutedText = onDark ? TEXT_MUTED_ON_DARK : TEXT_MUTED;
-  const primaryText = onDark ? TEXT_PRIMARY_ON_DARK : TEXT_PRIMARY;
-  const precisionStroke = onDark ? TEXT_PRIMARY_ON_DARK : SERIES_COLOR.precision;
-  const recallStroke = onDark ? TEXT_SECONDARY_ON_DARK : SERIES_COLOR.recall;
+export function PrecisionRecallCurveChart({ points, currentThreshold }: PrecisionRecallCurveChartProps) {
+  const mode = useThemeMode();
+  const palette = getPalette(mode);
+  const series = getSeriesColor(mode);
 
   return (
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={points} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid stroke={gridline} />
+        <CartesianGrid stroke={palette.gridline} />
         <XAxis
           dataKey="threshold"
           type="number"
@@ -78,29 +57,23 @@ export function PrecisionRecallCurveChart({ points, currentThreshold, onDark = f
           ticks={[0, 0.2, 0.4, 0.6, 0.8, 1]}
           tickFormatter={formatPercent}
           tickLine={false}
-          axisLine={{ stroke: gridline }}
-          tick={{ fill: mutedText, fontSize: 12 }}
+          axisLine={{ stroke: palette.gridline }}
+          tick={{ fill: palette.textMuted, fontSize: 12 }}
         />
-        <YAxis
-          domain={[0, 1]}
-          tickFormatter={formatPercent}
-          tickLine={false}
-          axisLine={false}
-          tick={{ fill: mutedText, fontSize: 12 }}
-        />
+        <YAxis domain={[0, 1]} tickFormatter={formatPercent} tickLine={false} axisLine={false} tick={{ fill: palette.textMuted, fontSize: 12 }} />
         <Tooltip content={(props) => <ChartTooltip {...props} />} />
         <Legend
           verticalAlign="top"
           align="right"
           height={32}
-          formatter={(value) => <span style={{ color: primaryText, fontSize: 13 }}>{value}</span>}
+          formatter={(value) => <span style={{ color: palette.textPrimary, fontSize: 13 }}>{value}</span>}
         />
-        <ReferenceLine x={currentThreshold} stroke={primaryText} strokeDasharray="4 4" />
+        <ReferenceLine x={currentThreshold} stroke={palette.accent} strokeDasharray="4 4" className="pr-threshold-line" />
         <Line
           type="monotone"
           dataKey="precision"
           name="Precision"
-          stroke={precisionStroke}
+          stroke={series.precision}
           strokeWidth={2.5}
           dot={false}
           isAnimationActive={false}
@@ -109,7 +82,7 @@ export function PrecisionRecallCurveChart({ points, currentThreshold, onDark = f
           type="monotone"
           dataKey="recall"
           name="Recall"
-          stroke={recallStroke}
+          stroke={series.recall}
           strokeWidth={2}
           strokeDasharray="6 3"
           dot={false}

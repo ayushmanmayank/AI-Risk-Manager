@@ -1,190 +1,221 @@
 /**
- * MONOCHROME/EDITORIAL RE-THEME (feature/ui-remake, design-direction
- * change) -- full replacement of the prior dark-violet-plus-4-status-hues
- * system. Grounded in three real references: Bloomberg Terminal ("color
- * is never decorative... reserved strictly for data, labels, and active
- * states"), Mercury (monochrome base, editorial serif headlines), and
- * Ramp (warm off-white canvas, ONE accent that appears only where money
- * moves). See the design-plan message for the full citation trail.
+ * DARK-GOLD ANIMATED THEME (feature/frontend-final-v3) -- full replacement
+ * of the monochrome/editorial system. Unlike every prior direction in this
+ * app's history, this one is a genuine two-mode system: the whole page
+ * switches between a dark and a light palette via the `data-theme`
+ * attribute on <html> (see ThemeProvider.tsx), not a per-card `onDark`
+ * prop. Every Tailwind color utility (`text-text-primary`, `bg-bg-surface`,
+ * `border-border`, etc.) resolves through CSS custom properties defined in
+ * index.css's `:root`/`[data-theme="light"]` blocks, so those follow the
+ * active mode automatically with zero JS involvement.
  *
- * THE CORE RULE: there is exactly ONE reserved accent color, and it means
- * exactly one thing -- HIGH risk / an active alert. Nowhere else. LOW and
- * MEDIUM are not "less saturated versions of a risk palette" -- they are
- * NOT COLORED AT ALL. They're differentiated by TYPE WEIGHT instead:
+ * This file exists for the values that DON'T get that for free: Recharts
+ * fills/strokes, SVG stroke props, and inline `style` colors (badge dots,
+ * RiskMeter fill) are raw hex, not var()-based -- CSS custom properties
+ * only resolve inside an actual CSS context (a stylesheet or a `style`
+ * attribute), not a bare SVG presentation attribute string, so passing
+ * `fill="var(--color-accent)"` directly to a Recharts <Bar> is not
+ * reliable. Every helper below takes an explicit `mode: ThemeMode`
+ * instead, mirroring the exact shape of the old `onDark: boolean` prop
+ * this replaces -- call sites read `useThemeMode()` once and pass `mode`
+ * down, same wiring pattern as before, different source of truth.
  *
- *   quiet  ("nothing to see")   -> --color-text-secondary (muted gray)
- *   noted  ("worth a glance")   -> --color-text-primary   (off-black --
- *                                   the same weight as any heading, so it
- *                                   visually "weighs more" than quiet
- *                                   without needing a second hue)
- *   alert  ("needs attention")  -> --color-accent          (the one signal)
+ * THE THREE-COLOR SYSTEM: LOW risk gets the reserved gold (`accent`)
+ * itself -- a real philosophical reversal from the prior monochrome
+ * system, where LOW/MEDIUM were deliberately uncolored and only HIGH
+ * earned the accent. Here accent means "the brand color," used for LOW
+ * tier, the active nav underline, and primary buttons; MEDIUM gets a
+ * distinct amber; HIGH/critical alerts get a rose -- see getLevelColor.
  *
- * This is why RISK_TIER_COLOR/SEVERITY_COLOR below only ever resolve to
- * one of THREE values total, not a rainbow of per-tier hues like the
- * prior system had (decisions map onto the same three via DECISION_LEVEL,
- * but nothing renders a decision as a raw color, so there's no
- * DECISION_COLOR export -- see that map's own comment). Badge.tsx
- * additionally varies dot-fill and font-weight by level -- see
- * SIGNAL_LEVEL below -- so the distinction is genuinely encoded in form,
- * not just a duller color.
+ * LIGHT-MODE CONTRAST: every pair below is COMPUTED (WCAG 2.x sRGB
+ * relative-luminance formula), not eyeballed -- see the ratios inline.
+ * Two of the light-mode hex values were explicitly revised DARKER than
+ * the literal spec draft because the computed ratio failed AA text
+ * contrast (4.5:1) against the white card surface -- the spec itself
+ * called this out for accent-amber ("darken if it fails WCAG AA"); the
+ * same discipline was extended to accent-rose, which measured 4.32:1
+ * (short of 4.5:1) at the originally-given value:
+ *
+ *   textSecondary  #8A7A4A -> revised #75663A  (4.23:1 -> 5.65:1 on white)
+ *   accentAmber    #C99A3E -> revised #8C6A1E  (2.57:1 -> 5.01:1 on white)
+ *   accentRose     #C9506E -> revised #C04665  (4.32:1 -> 4.88:1 on white)
+ *
+ * `accent` itself is UNCHANGED from the spec (#B8860B, 3.25:1 on white) --
+ * it clears the 3:1 non-text/UI-component threshold but not 4.5:1 text,
+ * which is exactly why the spec restricts it to "large UI elements/icons,
+ * never small body text." That restriction is enforced structurally here:
+ * getLevelColor's light-mode 'low' case returns textPrimary for TEXT use
+ * (badge labels), not the raw accent -- accent itself still paints LOW's
+ * dot/border/fill, which are graphical, not text, and only need 3:1.
  */
 
-export type SignalLevel = 'quiet' | 'noted' | 'alert';
+import type { AlertSeverity, Decision, DriftStatus, RiskTier } from '../types/api';
 
-export const TEXT_PRIMARY = '#16161a';
-// Not exported -- no external call site needs the light-surface secondary
-// color as a raw value anymore (the ones that used to have all moved to
-// TEXT_SECONDARY_ON_DARK once their card went dark). Still needed here
-// internally, as SIGNAL_LEVEL_COLOR/SERIES_COLOR's "quiet"/"recall" value.
-const TEXT_SECONDARY = '#6e6b72';
-export const TEXT_MUTED = '#9c98a0';
+export type ThemeMode = 'light' | 'dark';
 
-/** The one reserved accent -- HIGH risk / active alert, nowhere else in
- * the UI. Deliberately a warm SIGNAL-red, not an amber/gold "beacon"
- * color: this is a fraud tool, and HIGH has to unambiguously mean danger,
- * not just "notice me." See the design plan for the full reasoning
- * against the lighthouse-amber alternative. */
-export const ACCENT = '#c4321e';
+export interface Palette {
+  textPrimary: string;
+  textSecondary: string;
+  /** A third, dimmer text tier for supplementary captions/ids/timestamps
+   * -- checked against the 3:1 non-text/large-text threshold rather than
+   * 4.5:1 (same tier the prior system's TEXT_MUTED occupied). */
+  textMuted: string;
+  border: string;
+  surface: string;
+  /** A step lighter/more distinct than `surface` -- dropdown panels,
+   * skeleton placeholders, table-row hover tint, progress-bar tracks. */
+  surfaceRaised: string;
+  accent: string;
+  accentAmber: string;
+  accentRose: string;
+  gridline: string;
+  /** Neutral, non-status color for "the norm"/baseline series (e.g. Fraud
+   * Spike's baseline-vs-current bars) -- deliberately gray, not a level
+   * color, so the "current" bar (colored by severity) reads as the one
+   * thing actually varying. Graphic use only (a bar fill) -- checked
+   * against the 3:1 non-text threshold, not 4.5:1. */
+  baseline: string;
+}
 
-export const SIGNAL_LEVEL_COLOR: Record<SignalLevel, string> = {
-  quiet: TEXT_SECONDARY,
-  noted: TEXT_PRIMARY,
-  alert: ACCENT,
+// DARK -- default mode. Every ratio below is against the --bg-surface
+// value (rgba(19,20,23,0.8)) composited over the animated canvas gradient
+// at its darkest and lightest stops -- the range stays 16.4-16.9:1 for
+// text-primary, 5.6-5.8:1 for text-secondary/accent, 7.1-7.3:1 for
+// accent-amber, 5.3-5.5:1 for accent-rose across every stop, so one
+// representative figure per token is accurate everywhere the gradient
+// animates through.
+export const DARK_PALETTE: Palette = {
+  textPrimary: '#F2F4F0', // 16.6:1 on composited surface
+  textSecondary: '#8B8F94', // 5.7:1
+  textMuted: '#6B6E73', // 3.6:1 -- captions/ids/timestamps tier
+  border: '#2A2410',
+  surface: 'rgba(19, 20, 23, 0.8)',
+  surfaceRaised: 'rgba(30, 31, 35, 0.9)',
+  accent: '#B8860B', // 5.7:1 -- safe as text here, unlike light mode
+  accentAmber: '#C99A3E', // 7.2:1
+  accentRose: '#E0607A', // 5.4:1
+  gridline: '#2A2410',
+  baseline: '#75797E', // 4.2:1, graphic-use bar fill
 };
 
-export const RISK_TIER_LEVEL: Record<'LOW' | 'MEDIUM' | 'HIGH', SignalLevel> = {
-  LOW: 'quiet',
-  MEDIUM: 'noted',
-  HIGH: 'alert',
+// LIGHT -- toggled. See the file docstring for the two revised hex values
+// and their computed ratios (all against #FFFFFF, the card surface text
+// actually sits on -- not the canvas gradient behind cards).
+export const LIGHT_PALETTE: Palette = {
+  textPrimary: '#3A2E00', // 13.4:1 on white
+  textSecondary: '#75663A', // 5.65:1 (revised from spec's #8A7A4A, 4.23:1)
+  textMuted: '#8F8362', // 3.76:1 -- captions/ids/timestamps tier
+  border: '#E8DFC0',
+  surface: '#FFFFFF',
+  surfaceRaised: '#F7F3E8',
+  accent: '#B8860B', // 3.25:1 -- large UI/icons/decorative only, see below
+  accentAmber: '#8C6A1E', // 5.01:1 (revised from spec's #C99A3E, 2.57:1)
+  accentRose: '#C04665', // 4.88:1 (revised from spec's #C9506E, 4.32:1)
+  gridline: '#E8DFC0',
+  baseline: '#93876B', // 3.55:1, graphic-use bar fill
 };
 
-/** Kept as Record<Tier, string> (not just Record<Tier, SignalLevel>) so
- * every existing call site that wants a raw color string -- RadialRing's
- * `color` prop, RiskMeter's fill, Recharts' `<Cell fill=...>` -- keeps
- * working with ZERO changes; only the VALUES changed, resolved from
- * SIGNAL_LEVEL_COLOR above so there is still exactly one source of truth
- * for what each level actually looks like. */
-export const RISK_TIER_COLOR: Record<'LOW' | 'MEDIUM' | 'HIGH', string> = {
-  LOW: SIGNAL_LEVEL_COLOR[RISK_TIER_LEVEL.LOW],
-  MEDIUM: SIGNAL_LEVEL_COLOR[RISK_TIER_LEVEL.MEDIUM],
-  HIGH: SIGNAL_LEVEL_COLOR[RISK_TIER_LEVEL.HIGH],
+export function getPalette(mode: ThemeMode): Palette {
+  return mode === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
+}
+
+/** The 3-level system every status reading in the app resolves through:
+ * risk tier, decision, alert severity, and drift status are all, at
+ * bottom, "how concerned should you be" on the same low/medium/high
+ * scale -- see RISK_TIER_LEVEL/DECISION_LEVEL/SEVERITY_LEVEL/
+ * DRIFT_STATUS_LEVEL below, each mapping their own domain vocabulary onto
+ * this one shared scale so there is exactly one place a color is chosen
+ * for "medium," not four. */
+export type SignalLevel = 'low' | 'medium' | 'high';
+
+/** Fill/dot/border color for a level -- always safe to use as a graphical
+ * (non-text) value: dots, borders, chart fills, ring strokes. For BADGE
+ * TEXT specifically, use getLevelTextColor instead, which enforces the
+ * light-mode "accent is never small body text" rule. */
+export function getLevelColor(mode: ThemeMode, level: SignalLevel): string {
+  const p = getPalette(mode);
+  if (level === 'low') return p.accent;
+  if (level === 'medium') return p.accentAmber;
+  return p.accentRose;
+}
+
+/** Text-safe color for a level. In dark mode every level color already
+ * clears 4.5:1 (5.6-7.2:1), so text can use the same value as the fill.
+ * In light mode, raw `accent` only clears 3.25:1 (fails AA text) -- LOW's
+ * text falls back to textPrimary instead, matching the spec's explicit
+ * "accent reserved for large UI elements/icons, never small body text"
+ * rule; MEDIUM/HIGH's revised amber/rose both clear 4.5:1 so they keep
+ * their own color as text. */
+export function getLevelTextColor(mode: ThemeMode, level: SignalLevel): string {
+  const p = getPalette(mode);
+  if (mode === 'light' && level === 'low') return p.textPrimary;
+  return getLevelColor(mode, level);
+}
+
+export const RISK_TIER_LEVEL: Record<RiskTier, SignalLevel> = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
 };
 
-/** Decisions map 1:1 to the same status severity as their risk tier
- * (ALLOW<-LOW, REVIEW<-MEDIUM, HOLD<-HIGH), so they reuse the same level
- * system rather than a separate categorical one. */
-export const DECISION_LEVEL: Record<'ALLOW' | 'REVIEW' | 'HOLD', SignalLevel> = {
-  ALLOW: 'quiet',
-  REVIEW: 'noted',
-  HOLD: 'alert',
+/** Decisions map 1:1 onto the same severity as their risk tier
+ * (ALLOW<-LOW, REVIEW<-MEDIUM, HOLD<-HIGH). */
+export const DECISION_LEVEL: Record<Decision, SignalLevel> = {
+  ALLOW: 'low',
+  REVIEW: 'medium',
+  HOLD: 'high',
 };
-// No DECISION_COLOR (resolved-color) export here, unlike RISK_TIER_COLOR/
-// SEVERITY_COLOR below -- nothing in the app renders a decision as a raw
-// color value; DecisionBadge (Badge.tsx) reads DECISION_LEVEL directly.
 
-/** Alert severity is a 4-step scale but there are only 3 form-levels.
- * NONE and LOW both fold into "quiet" (their own label text -- "NONE" vs
- * "LOW" -- already carries the distinction; z>=3.0-but-mild doesn't
+/** NONE and LOW both fold into 'low' -- their own label text already
+ * carries the distinction; a z-score that's mild-but-nonzero doesn't
  * warrant the same visual weight as a genuinely elevated MEDIUM/HIGH
- * reading) -- see src/anomaly/spike_detector.py for where these
- * severities come from. */
-export const SEVERITY_LEVEL: Record<'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', SignalLevel> = {
-  NONE: 'quiet',
-  LOW: 'quiet',
-  MEDIUM: 'noted',
-  HIGH: 'alert',
-};
-export const SEVERITY_COLOR: Record<'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', string> = {
-  NONE: SIGNAL_LEVEL_COLOR[SEVERITY_LEVEL.NONE],
-  LOW: SIGNAL_LEVEL_COLOR[SEVERITY_LEVEL.LOW],
-  MEDIUM: SIGNAL_LEVEL_COLOR[SEVERITY_LEVEL.MEDIUM],
-  HIGH: SIGNAL_LEVEL_COLOR[SEVERITY_LEVEL.HIGH],
+ * reading. See src/anomaly/spike_detector.py for where these come from. */
+export const SEVERITY_LEVEL: Record<AlertSeverity, SignalLevel> = {
+  NONE: 'low',
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
 };
 
-/** Precision/recall (Threshold Simulator) get ZERO accent -- this is
- * model-performance data, not risk-tier data, so the reserved signal
- * doesn't apply here at all (see the design plan's item 5). The two
- * series are differentiated by LINE STYLE (solid vs. dashed) in
- * PrecisionRecallCurveChart.tsx, not color -- these two values only need
- * to be distinguishable enough for the legend swatch/tooltip text, not
- * carry the whole distinction themselves. */
-export const SERIES_COLOR = {
-  precision: TEXT_PRIMARY,
-  recall: TEXT_SECONDARY,
+export const DRIFT_STATUS_LEVEL: Record<DriftStatus, SignalLevel> = {
+  STABLE: 'low',
+  MODERATE_DRIFT: 'medium',
+  SIGNIFICANT_DRIFT: 'high',
 };
 
-/** Neutral, non-status color for "the norm"/baseline series (e.g. Fraud
- * Spike's baseline-vs-current bars) -- a light-medium warm gray,
- * deliberately lighter than TEXT_SECONDARY so the "current" bar (colored
- * by severity level) reads as the one thing actually varying. */
-export const BASELINE_COLOR = '#b5b1a8';
+export function getRiskTierColor(mode: ThemeMode): Record<RiskTier, string> {
+  return {
+    LOW: getLevelColor(mode, RISK_TIER_LEVEL.LOW),
+    MEDIUM: getLevelColor(mode, RISK_TIER_LEVEL.MEDIUM),
+    HIGH: getLevelColor(mode, RISK_TIER_LEVEL.HIGH),
+  };
+}
 
-export const GRIDLINE = '#e2dfda';
+export function getSeverityColor(mode: ThemeMode): Record<AlertSeverity, string> {
+  return {
+    NONE: getLevelColor(mode, SEVERITY_LEVEL.NONE),
+    LOW: getLevelColor(mode, SEVERITY_LEVEL.LOW),
+    MEDIUM: getLevelColor(mode, SEVERITY_LEVEL.MEDIUM),
+    HIGH: getLevelColor(mode, SEVERITY_LEVEL.HIGH),
+  };
+}
 
-/**
- * DARK-SURFACE VARIANT (nav/header + Dashboard's cards, per the specific
- * layout revision request) -- everything above this point assumes text
- * sits on the off-white canvas/off-white cards. These are the flipped
- * equivalents for content sitting directly on the off-black surface
- * (#16161a, i.e. TEXT_PRIMARY reused as a background), each contrast-
- * checked against WCAG AA (4.5:1 normal text) rather than eyeballed:
- *
- *   TEXT_PRIMARY_ON_DARK   #fafaf8 on #16161a -> 17.27:1
- *   TEXT_SECONDARY_ON_DARK #a8a5ac on #16161a -> 7.43:1
- *   TEXT_MUTED_ON_DARK     #8e8a92 on #16161a -> 5.33:1
- *   ACCENT_ON_DARK         #e65a42 on #16161a -> 5.07:1
- *
- * ACCENT_ON_DARK exists ONLY because the real, unmodified ACCENT
- * (#c4321e) measures 3.28:1 on #16161a -- passes the 3:1 non-text/UI-
- * component threshold (fine for a dot, border, or bar fill) but fails
- * AA for actual text. Anywhere the accent is rendered as TEXT on a dark
- * surface, use ACCENT_ON_DARK; anywhere it's a marker/fill/border, the
- * real ACCENT is fine and keeps the same hue everywhere else in the app.
- */
-export const TEXT_PRIMARY_ON_DARK = '#fafaf8';
-export const TEXT_SECONDARY_ON_DARK = '#a8a5ac';
-export const TEXT_MUTED_ON_DARK = '#8e8a92';
-export const ACCENT_ON_DARK = '#e65a42';
-export const GRIDLINE_ON_DARK = '#2c2c32';
+export function getDriftStatusColor(mode: ThemeMode): Record<DriftStatus, string> {
+  return {
+    STABLE: getLevelColor(mode, DRIFT_STATUS_LEVEL.STABLE),
+    MODERATE_DRIFT: getLevelColor(mode, DRIFT_STATUS_LEVEL.MODERATE_DRIFT),
+    SIGNIFICANT_DRIFT: getLevelColor(mode, DRIFT_STATUS_LEVEL.SIGNIFICANT_DRIFT),
+  };
+}
 
-/** The on-dark equivalent of SIGNAL_LEVEL_COLOR (and, downstream,
- * RISK_TIER_COLOR/SEVERITY_COLOR/DRIFT_STATUS_COLOR -- no DECISION_COLOR
- * equivalent, same reason as the light-surface version above) --
- * needed everywhere a level color is used as a raw value (Recharts fills/
- * strokes, a badge's inline color, RiskMeter's fill) INSIDE a dark card,
- * since none of those are var()-based and so don't pick up card-dark's
- * CSS-cascade trick automatically. This isn't just a "nicer contrast"
- * upgrade -- the LIGHT-surface "noted" color (TEXT_PRIMARY, #16161a) is
- * literally the same value as the dark card background itself, so it
- * measures 1:1 (invisible) if used unmodified on a dark card, not just a
- * failing-AA number. Every raw-hex call site rendered on a dark surface
- * must use this map (or the tier/decision/severity maps resolved from it
- * below), never the light-surface one. */
-export const SIGNAL_LEVEL_COLOR_ON_DARK: Record<SignalLevel, string> = {
-  quiet: TEXT_SECONDARY_ON_DARK,
-  noted: TEXT_PRIMARY_ON_DARK,
-  alert: ACCENT_ON_DARK,
-};
-
-export const RISK_TIER_COLOR_ON_DARK: Record<'LOW' | 'MEDIUM' | 'HIGH', string> = {
-  LOW: SIGNAL_LEVEL_COLOR_ON_DARK[RISK_TIER_LEVEL.LOW],
-  MEDIUM: SIGNAL_LEVEL_COLOR_ON_DARK[RISK_TIER_LEVEL.MEDIUM],
-  HIGH: SIGNAL_LEVEL_COLOR_ON_DARK[RISK_TIER_LEVEL.HIGH],
-};
-
-// No DECISION_COLOR_ON_DARK either, matching DECISION_COLOR's absence
-// above -- same reason: nothing renders a decision as a raw color value,
-// dark surface or not.
-
-export const SEVERITY_COLOR_ON_DARK: Record<'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', string> = {
-  NONE: SIGNAL_LEVEL_COLOR_ON_DARK[SEVERITY_LEVEL.NONE],
-  LOW: SIGNAL_LEVEL_COLOR_ON_DARK[SEVERITY_LEVEL.LOW],
-  MEDIUM: SIGNAL_LEVEL_COLOR_ON_DARK[SEVERITY_LEVEL.MEDIUM],
-  HIGH: SIGNAL_LEVEL_COLOR_ON_DARK[SEVERITY_LEVEL.HIGH],
-};
-
-// No SURFACE_INVERSE export here -- the dark surface color itself
-// (nav rail + card-dark background) only ever needs to exist as a CSS
-// custom property (--color-surface-inverse in index.css), never as a raw
-// JS value; see that token's own docstring in index.css for why it's a
-// standalone value rather than a var(--color-text-primary) reference.
+/** Precision/recall (Threshold Simulator): precision (the page's
+ * "headline" metric) gets the reserved accent; recall stays neutral
+ * (textSecondary) -- differentiated further by line style (solid vs.
+ * dashed) in PrecisionRecallCurveChart.tsx. Per the Phase 3 spec ("same
+ * color system" as Fraud Spike's accent-stroked trend line), this
+ * deliberately reintroduces the accent here, reversing the prior
+ * monochrome system's "zero accent on this chart" rule. */
+export function getSeriesColor(mode: ThemeMode): { precision: string; recall: string } {
+  const p = getPalette(mode);
+  return { precision: p.accent, recall: p.textSecondary };
+}

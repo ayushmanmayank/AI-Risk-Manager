@@ -19,13 +19,12 @@ export function ChargebackCenter() {
 
   return (
     <div className="space-y-6">
-      <div className="card-dark p-6">
+      <div className="card p-6">
         <h1 className="font-display text-lg font-semibold text-text-primary">Chargeback Evidence Center</h1>
         <p className="mt-1 max-w-2xl text-sm text-text-secondary">
-          <strong className="text-text-primary">Chargeback and refund records here are seeded/simulated
-          demo data</strong> -- this project has no real chargeback history. The transaction and
-          risk-prediction data each one is layered onto is real (from{' '}
-          <code className="rounded bg-bg-surface-raised px-1 py-0.5 text-xs">simulator/simulate.py</code> replays
+          <strong className="text-text-primary">Chargeback and refund records here are seeded/simulated demo data</strong> --
+          this project has no real chargeback history. The transaction and risk-prediction data each one is layered
+          onto is real (from <code className="rounded bg-bg-surface-raised px-1 py-0.5 text-xs">simulator/simulate.py</code> replays
           or manual API calls), never fabricated.
         </p>
       </div>
@@ -36,7 +35,7 @@ export function ChargebackCenter() {
           description="Run src/evidence/seed_chargebacks.py to seed a handful of simulated chargebacks against real scored transactions."
         />
       ) : (
-        <div className="overflow-x-auto card-dense-dark">
+        <div className="overflow-x-auto card-dense">
           <table className="min-w-full divide-y divide-border text-sm">
             <thead>
               <tr className="text-left text-xs font-medium tracking-wide text-text-muted uppercase">
@@ -51,30 +50,20 @@ export function ChargebackCenter() {
             </thead>
             <tbody className="divide-y divide-border">
               {data.map((item) => (
-                <tr
-                  key={item.chargeback_id}
-                  onClick={() => navigate(`/chargebacks/${item.chargeback_id}`)}
-                  className="cursor-pointer hover:bg-bg-surface-raised"
-                >
-                  <td className="max-w-[180px] truncate px-4 py-3 font-mono text-xs text-text-secondary">
-                    {item.chargeback_id}
-                  </td>
+                <tr key={item.chargeback_id} onClick={() => navigate(`/chargebacks/${item.chargeback_id}`)} className="row-glow">
+                  <td className="max-w-[180px] truncate px-4 py-3 font-mono text-xs text-text-secondary">{item.chargeback_id}</td>
                   <td className="px-4 py-3 font-mono tabular-nums text-text-primary">{formatAmount(item.amount)}</td>
                   <td className="px-4 py-3 text-text-primary">{item.reason}</td>
                   <td className="px-4 py-3 text-text-secondary">{item.status}</td>
                   <td className="px-4 py-3">
                     {item.risk_tier_at_scoring ? (
-                      <RiskTierBadge tier={item.risk_tier_at_scoring} onDark />
+                      <RiskTierBadge tier={item.risk_tier_at_scoring} />
                     ) : (
                       <span className="text-xs text-text-muted">no data</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <FlaggedInAdvanceBadge
-                      flagged={item.was_flagged_in_advance}
-                      hasData={item.risk_tier_at_scoring !== null}
-                      onDark
-                    />
+                    <FlaggedInAdvanceBadge flagged={item.was_flagged_in_advance} hasData={item.risk_tier_at_scoring !== null} />
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-text-secondary">{formatTimestamp(item.timestamp)}</td>
                 </tr>

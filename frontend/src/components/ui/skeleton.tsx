@@ -11,7 +11,7 @@ import { cn } from '../../lib/utils';
 export function Skeleton({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      className={cn('animate-pulse rounded-(--radius-card) border border-border bg-bg-surface-raised', className)}
+      className={cn('animate-pulse rounded-xl border border-border bg-bg-surface-raised', className)}
       {...props}
     />
   );

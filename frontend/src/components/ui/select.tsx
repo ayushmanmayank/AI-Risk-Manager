@@ -27,8 +27,8 @@ function SelectTrigger({ className, children, ...props }: ComponentProps<typeof 
         'flex h-8 items-center justify-between gap-2 rounded-(--radius-control) border border-border bg-bg-surface px-2.5 text-sm text-text-primary outline-none',
         'transition-colors duration-150',
         'hover:bg-bg-surface-raised',
-        'data-[state=open]:bg-bg-surface-raised data-[state=open]:border-[var(--color-text-primary)]',
-        'focus-visible:outline-2 focus-visible:outline-[var(--color-text-primary)] focus-visible:outline-offset-2',
+        'data-[state=open]:bg-bg-surface-raised data-[state=open]:border-accent',
+        'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
         'disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}

@@ -18,10 +18,11 @@ interface SparklineProps {
  * no new API calls, just retaining real values the page already
  * receives on each poll tick instead of discarding them).
  *
- * No glow (the monochrome/editorial direction has none anywhere) --
- * `color` sets a plain stroke. Current usage passes a neutral gray, not
- * the reserved accent: a sparkline is a visualization, not itself an
- * alert (see FraudSpike.tsx and the design plan's item 5).
+ * `color` sets the stroke -- Fraud Spike passes the theme's accent gold
+ * (its trend line is the one chart on that page allowed the reserved
+ * color, per the spec). Animated: each new live reading interpolates the
+ * line's shape over 300ms rather than jumping/redrawing instantly, so
+ * the trend visibly "extends" tick to tick.
  */
 export function Sparkline({ points, color, height = 64 }: SparklineProps) {
   if (points.length < 2) {
@@ -42,7 +43,9 @@ export function Sparkline({ points, color, height = 64 }: SparklineProps) {
           stroke={color}
           strokeWidth={2}
           dot={false}
-          isAnimationActive={false}
+          isAnimationActive
+          animationDuration={300}
+          animationEasing="ease-out"
         />
       </LineChart>
     </ResponsiveContainer>

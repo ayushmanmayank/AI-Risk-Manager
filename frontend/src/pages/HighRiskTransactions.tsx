@@ -53,7 +53,7 @@ export function HighRiskTransactions() {
         <FilterSelect label="Decision" value={decisionFilter} options={DECISION_OPTIONS} onChange={setDecisionFilter} />
       </div>
 
-      <div className="overflow-x-auto card-dense-dark">
+      <div className="overflow-x-auto card-dense">
         <table className="min-w-full divide-y divide-border text-sm">
           <thead>
             <tr className="text-left text-xs font-medium tracking-wide text-text-muted uppercase">
@@ -68,24 +68,18 @@ export function HighRiskTransactions() {
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.map((item) => (
-              <tr
-                key={item.transaction_id}
-                onClick={() => navigate(`/transactions/${item.transaction_id}`)}
-                className="cursor-pointer hover:bg-bg-surface-raised"
-              >
-                <td className="max-w-[220px] truncate px-4 py-3 font-mono text-xs text-text-secondary">
-                  {item.transaction_id}
-                </td>
+              <tr key={item.transaction_id} onClick={() => navigate(`/transactions/${item.transaction_id}`)} className="row-glow">
+                <td className="max-w-[220px] truncate px-4 py-3 font-mono text-xs text-text-secondary">{item.transaction_id}</td>
                 <td className="px-4 py-3 font-mono tabular-nums text-text-primary">{formatAmount(item.amount)}</td>
                 <td className="px-4 py-3">
-                  <RiskMeter probability={item.fraud_probability} tier={item.risk_tier} compact onDark />
+                  <RiskMeter probability={item.fraud_probability} tier={item.risk_tier} compact />
                 </td>
                 <td className="px-4 py-3">
-                  <RiskTierBadge tier={item.risk_tier} onDark />
+                  <RiskTierBadge tier={item.risk_tier} />
                 </td>
                 <td className="px-4 py-3 font-mono tabular-nums text-text-primary">{formatAmount(item.expected_loss)}</td>
                 <td className="px-4 py-3">
-                  <DecisionBadge decision={item.decision} onDark />
+                  <DecisionBadge decision={item.decision} />
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-text-secondary">{formatTimestamp(item.timestamp)}</td>
               </tr>
