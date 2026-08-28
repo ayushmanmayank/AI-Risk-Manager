@@ -103,26 +103,45 @@ export function usePolling<T>(fetcher: () => Promise<T>, intervalMs: number): Po
  * those changes -- used by the Threshold Simulator's slider, where every
  * debounced threshold change should update the numbers smoothly rather
  * than blanking the page each time. The first fetch still uses the normal
- * loading/error states. A transient error on a later fetch (deps already
- * changed once successfully) is swallowed silently rather than replacing
- * good data with an error screen -- the next debounced change will retry
- * anyway.
+ * loading/error states.
+ *
+ * A transient error on a later fetch (deps already changed once
+ * successfully) does NOT replace good data with an error screen -- the
+ * last-known-good numbers stay on screen -- but it's also not swallowed
+ * silently: `isStale`/`lastError` surface it so the page can show an
+ * explicit banner (matching usePolling's isStale/lastPollError shape).
+ * Previously this branch just discarded the error entirely, so a slider
+ * drag past a moment where the backend blipped would freeze on stale
+ * numbers with zero indication anything had gone wrong ("silent freeze").
  */
-export function useLiveApiData<T>(fetcher: () => Promise<T>, deps: unknown[] = []): AsyncState<T> {
+export function useLiveApiData<T>(
+  fetcher: () => Promise<T>,
+  deps: unknown[] = [],
+): AsyncState<T> & { isStale: boolean; lastError: Error | null } {
   const [state, setState] = useState<AsyncState<T>>({ status: 'loading' });
+  const [isStale, setIsStale] = useState(false);
+  const [lastError, setLastError] = useState<Error | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     fetcher()
       .then((data) => {
-        if (!cancelled) setState({ status: 'success', data });
+        if (cancelled) return;
+        setState({ status: 'success', data });
+        setIsStale(false);
+        setLastError(null);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        const err = error instanceof Error ? error : new Error(String(error));
         setState((previous) => {
-          if (previous.status === 'success') return previous;
-          return { status: 'error', error: error instanceof Error ? error : new Error(String(error)) };
+          if (previous.status === 'success') {
+            setIsStale(true);
+            setLastError(err);
+            return previous;
+          }
+          return { status: 'error', error: err };
         });
       });
 
@@ -133,5 +152,5 @@ export function useLiveApiData<T>(fetcher: () => Promise<T>, deps: unknown[] = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  return state;
+  return { ...state, isStale, lastError };
 }
