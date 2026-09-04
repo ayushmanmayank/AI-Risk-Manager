@@ -6,16 +6,57 @@ src/risk/cost_engine.py verbatim (Day 2); no new ML logic here.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from api.schemas.simulate import SimulateRequest, SimulateResponse
+from api.services.rate_limiter import RateLimiter
 from api.services.simulation_service import simulation_service
 from src.risk.cost_engine import confusion_counts_at_threshold, expected_cost
 
 router = APIRouter()
 
+# 500/min default, not the same 200/min /predict uses -- sized against
+# this endpoint's actual real traffic pattern, not a guess: the Threshold
+# Simulator page fires 51 parallel /simulate calls on every mount (one
+# per point on the P/R curve -- see frontend's CURVE_THRESHOLDS), plus up
+# to one more per 150ms-debounced slider tick while a judge drags across
+# the full 0-1 range. A continuous drag for the full 60s window is, worst
+# case, ~400 additional debounced calls (60000ms / 150ms), so 51 + ~400
+# with real margin lands well under 500 for one legitimate session, while
+# still capping a runaway/abusive client at a small fraction of what an
+# actual scraper would need to matter (each call here is cheap -- no
+# model inference, just re-thresholding an already-loaded array -- so the
+# DoS concern is lower than /predict's, which is reflected in the higher
+# ceiling rather than a stricter one).
+SIMULATE_RATE_LIMIT_PER_MINUTE = int(os.environ.get("SIMULATE_RATE_LIMIT_PER_MINUTE", "500"))
+simulate_rate_limiter = RateLimiter(max_requests=SIMULATE_RATE_LIMIT_PER_MINUTE, window_seconds=60.0)
 
-@router.post("/simulate", response_model=SimulateResponse)
+
+def enforce_simulate_rate_limit(request: Request) -> None:
+    """Same dependency pattern as predict.py's enforce_predict_rate_limit --
+    see that function's docstring for why this is a dependency, not
+    middleware, and why request.client can be None."""
+    client_key = request.client.host if request.client else "unknown"
+    result = simulate_rate_limiter.check(client_key)
+    if not result.allowed:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                f"Rate limit exceeded: max {SIMULATE_RATE_LIMIT_PER_MINUTE} requests/minute "
+                f"per client. Retry after {result.retry_after_seconds:.1f}s."
+            ),
+            headers={"Retry-After": str(int(result.retry_after_seconds) + 1)},
+        )
+
+
+@router.post(
+    "/simulate",
+    response_model=SimulateResponse,
+    responses={429: {"description": "Rate limit exceeded for this client IP"}},
+    dependencies=[Depends(enforce_simulate_rate_limit)],
+)
 def simulate(request: SimulateRequest) -> SimulateResponse:
     if not simulation_service.is_loaded:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail="Validation set not loaded")

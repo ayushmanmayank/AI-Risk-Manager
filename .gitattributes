@@ -1,0 +1,6 @@
+# docker-entrypoint.sh must stay LF -- a CRLF shebang line ("#!/bin/sh\r")
+# fails to parse inside the Linux container, and this repo is developed
+# on Windows (see git's own core.autocrlf-driven CRLF warnings on every
+# other tracked file), so a future commit from a default Windows git
+# config could silently reintroduce that break without this.
+*.sh text eol=lf
