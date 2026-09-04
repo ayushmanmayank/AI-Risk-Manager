@@ -27,7 +27,15 @@ ARG VITE_API_BASE_URL=http://localhost:8000/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
-FROM nginx:alpine
+# nginxinc/nginx-unprivileged, not the plain nginx:alpine image -- the
+# stock image runs its worker as root (needed only because binding port
+# 80 requires it); the unprivileged variant is the same nginx built to
+# run entirely as a non-root user on an unprivileged port (8080, see
+# nginx.conf) out of the box, no manual USER/chown juggling with nginx's
+# own runtime directories (/var/cache/nginx, /var/run, etc., which the
+# plain image's non-root user wouldn't have write access to without
+# extra setup this image already handles correctly).
+FROM nginxinc/nginx-unprivileged:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+EXPOSE 8080

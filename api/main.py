@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from api.routes import (
     alerts,
@@ -59,15 +60,42 @@ async def lifespan(app: FastAPI):
     yield
 
 
+# debug is explicitly False (not just relying on Starlette's own default,
+# also False) -- debug=True would echo full tracebacks (file paths, code
+# structure, local variable values) straight into 500 responses. Full
+# details still reach you: every unhandled exception is logged
+# server-side with its real traceback via the handler below, just never
+# sent to the client.
 app = FastAPI(
     title="AI Risk Manager - Fraud Detection API",
     version="0.3.0",
     lifespan=lifespan,
+    debug=False,
 )
 
-# Local-dev / Docker-demo CORS only: not the auth/rate-limiting deferral
-# from Day 3 — the frontend cannot make any cross-origin request at all
-# without this. Tighten before any real deploy.
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Last-resort catch-all: an unhandled exception would otherwise still
+    produce a safe, generic Starlette 500 response even without this (this
+    is not what closes a real hole) -- it's here so that safe response is
+    logged with the real traceback server-side, matching every other
+    request's structured logging line, and so the generic-message
+    behavior is an explicit, visible decision in this file rather than an
+    implicit default a reviewer has to go verify in Starlette's source.
+    """
+    logger.exception("unhandled_exception path=%s method=%s", request.url.path, request.method)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+# No wildcard, never has been -- allow_origins is always an explicit list.
+# The list below is only the LOCAL-DEV DEFAULT, used when CORS_ORIGINS
+# isn't set at all; a real deployment MUST set CORS_ORIGINS to the actual
+# production frontend origin (see README's Production considerations) --
+# this mechanism already supports that with zero code changes, just the
+# env var. Left as localhost-only defaults (not a placeholder production
+# domain) so a fresh clone works immediately with no required setup, at
+# the cost of needing that one explicit env var before any real deploy --
+# a tradeoff stated here, not hidden.
 #
 # Configurable via CORS_ORIGINS (comma-separated) because the frontend's
 # origin genuinely differs between `npm run dev` (Vite on :5173) and the
@@ -99,6 +127,74 @@ app.add_middleware(
     allow_headers=["*"],
 )
 logger.info("CORS allow_origins=%s", CORS_ORIGINS)
+
+
+# Security headers, applied to every response. Two policies:
+# - Everywhere: X-Content-Type-Options (stop MIME-sniffing) and
+#   X-Frame-Options: DENY (this API serves no page anyone should ever
+#   frame -- not a UI, not an auth flow with a legitimate embed case).
+# - Content-Security-Policy differs by path. The JSON API surface gets
+#   `default-src 'none'` -- there's no reason a JSON response should ever
+#   load a script/style/image/frame, so deny everything outright. /docs
+#   and /redoc are real HTML pages that load Swagger/ReDoc's JS+CSS from
+#   jsdelivr's CDN by default (FastAPI's own default, not something this
+#   app added -- see get_swagger_ui_html's swagger_js_url/swagger_css_url
+#   defaults) plus a favicon from fastapi.tiangolo.com, so those two
+#   paths get a scoped policy that allows exactly those origins and
+#   nothing else, rather than either breaking the docs UI or leaving it
+#   with no policy at all.
+_DOCS_PATHS = {"/docs", "/redoc"}
+_DOCS_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' https://cdn.jsdelivr.net; "
+    "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+    "img-src 'self' data: https://fastapi.tiangolo.com; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'"
+)
+_API_CSP = "default-src 'none'; frame-ancestors 'none'"
+
+
+# Every real request body this API ever needs is tiny (TransactionIn is
+# ~30 floats, well under 1KB as JSON; ReturnOrderIn is smaller still) --
+# there is no legitimate caller that would ever send more than a few KB.
+# Starlette/FastAPI apply no request-body size cap of their own by
+# default (that's left to a reverse proxy or the app), so an oversized
+# payload would otherwise be read fully into memory before Pydantic ever
+# gets a chance to reject it on shape. Checked via Content-Length before
+# the body is read at all -- a request lying about its Content-Length
+# (or omitting it and streaming an oversized chonky body via chunked
+# transfer-encoding) is a residual gap this header check doesn't close;
+# a production deployment's reverse proxy (nginx's client_max_body_size,
+# or the PaaS's own edge limit) is the real backstop for that case -- see
+# README's Production Considerations.
+MAX_REQUEST_BODY_BYTES = int(os.environ.get("MAX_REQUEST_BODY_BYTES", str(256 * 1024)))
+
+
+@app.middleware("http")
+async def body_size_limit_middleware(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > MAX_REQUEST_BODY_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": f"Request body exceeds the {MAX_REQUEST_BODY_BYTES}-byte limit"},
+                )
+        except ValueError:
+            pass  # Malformed header -- let normal request handling reject it downstream.
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = (
+        _DOCS_CSP if request.url.path in _DOCS_PATHS else _API_CSP
+    )
+    return response
 
 
 @app.middleware("http")

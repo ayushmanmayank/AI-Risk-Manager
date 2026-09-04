@@ -118,8 +118,12 @@ cp .env.example .env
 |---|---|---|
 | `BACKEND_PORT` | `8000` | Host port the API is published on |
 | `FRONTEND_PORT` | `3000` | Host port the web app is published on |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000` | Comma-separated origins the backend accepts cross-origin requests from |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000` | Comma-separated origins the backend accepts cross-origin requests from. **Local-dev defaults only** — a real deployment must set this to the exact production frontend origin(s), never a wildcard and never left at these localhost defaults (see Production considerations) |
 | `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Baked into the frontend build; where the browser sends API calls |
+| `PREDICT_RATE_LIMIT_PER_MINUTE` | `200` | Per-IP sliding-window limit on `POST /predict` |
+| `SIMULATE_RATE_LIMIT_PER_MINUTE` | `500` | Per-IP limit on `POST /simulate` (higher than `/predict`'s — sized against the Threshold Simulator page's own legitimate ~51-450 calls/minute, see `api/routes/simulate.py`) |
+| `RETURN_PREDICT_RATE_LIMIT_PER_MINUTE` | `120` | Per-IP limit on `POST /predict/return` |
+| `MAX_REQUEST_BODY_BYTES` | `262144` (256KB) | Requests with a larger `Content-Length` are rejected with 413 before the body is read — every real payload here is well under 1KB |
 
 Two things worth understanding, not just copying:
 
@@ -516,10 +520,18 @@ caution than the fraud model's.
   had just been fully exhausted; safe and fast (~11-15s) enough to run
   before every rehearsal, not just once before the real thing. See
   `docs/demo_script.md` for the full procedure.
-- **Single-machine SQLite, no auth, no rate limiting.** This is an
-  intentional, stated hackathon-scope deferral, not an oversight — none of
-  it was required by the brief, and adding it would have traded time away
-  from the three things that were.
+- **Single-machine SQLite, no per-caller authentication.** Rate limiting
+  *does* exist (`/predict`, `/simulate`, and `/predict/return` are all
+  IP-limited — see Environment variables above) and is not the gap this
+  bullet used to describe; what remains genuinely absent is any notion of
+  identity — anyone who can reach the port can call every endpoint, there
+  are no API keys or accounts. This is an intentional, stated
+  hackathon-scope deferral, not an oversight: none of it was required by
+  the brief, `/predict` staying open is deliberate (it's the core feature
+  a judge should be able to try directly, including through `/docs`), and
+  adding real auth would have traded time away from the three things that
+  were required. See Production considerations for what a real deployment
+  would add here.
 - **The return-risk scorer's (Tier 2) "returned" label is a real but
   imperfect proxy, not confirmed ground truth.** UCI Online Retail II has
   no explicit "was this order returned" field. The label used here — a
@@ -552,33 +564,103 @@ caution than the fraud model's.
 Everything above describes what was actually built and verified for this
 submission. This section is different on purpose: **documented engineering
 judgment about how this would need to change to run at real production
-scale — on paper only, nothing here is implemented.** Two small pieces of
-*hardening* (not full production-scale rework) were added in Tier 4 —
-basic rate limiting and a short-TTL response cache, both described
-honestly below, including exactly where their current form stops being
-enough.
+scale.** Most of it remains on-paper-only engineering judgment, but a real
+hardening pass (`feature/production-hardening`) has since been applied and
+verified live — see "What's actually hardened now" immediately below
+before the on-paper items that follow it.
 
-**What Tier 4 actually added, and its explicit limit.** `POST /predict`
-now enforces a configurable per-IP rate limit (`PREDICT_RATE_LIMIT_PER_MINUTE`,
-default 200/min -- deliberately not the more obvious "60/min": that broke
-`scripts/reset_demo_data.py`'s own legitimate 68-call seeding run when
-first tested live, and two consecutive reset runs is 136 calls, so 200
-was chosen with real margin, not just picked to look conventional) via a
-small hand-rolled in-memory sliding-window limiter
-(`api/services/rate_limiter.py`), and `GET /analytics` is backed by a
-short in-memory TTL cache (`ANALYTICS_CACHE_TTL_SECONDS`, default 5s,
-`api/services/ttl_cache.py`). Both were deliberately hand-rolled instead
-of pulling in `slowapi`/Redis — no new dependency, easy to unit-test
-deterministically, and consistent with this project's existing "don't add
-a dependency to solve a problem a few dozen lines solves just as well"
-calls (see `src/monitoring/drift_detector.py`'s PSI-over-KS-test reasoning
-and `src/anomaly/spike_detector.py`'s hand-rolled z-test). **The explicit
-cost of that choice**: both live in one process's memory. They are
-correct for this project's actual deployment (one uvicorn process, no
-`--workers` flag — see the `Dockerfile`), but a second replica would track
-its own separate rate-limit counts and its own separate cache, silently
-defeating both the moment this runs behind a load balancer with more than
-one instance. That gap is the first thing addressed below, not hidden.
+**What's actually hardened now (verified live, not just described).**
+- **Rate limiting**, hand-rolled (`api/services/rate_limiter.py`, a
+  per-key sliding-window log — see that file's own docstring for why not
+  `slowapi`), on all three POST endpoints: `/predict` (200/min default),
+  `/simulate` (500/min — sized against the Threshold Simulator page's own
+  ~51-450 legitimate calls/minute, see `api/routes/simulate.py`), and
+  `/predict/return` (120/min). `GET /analytics` is backed by a short
+  in-memory TTL cache (`ANALYTICS_CACHE_TTL_SECONDS`, default 5s,
+  `api/services/ttl_cache.py`). **Explicit limit, unchanged from before**:
+  all of this lives in one process's memory — correct for this project's
+  actual deployment (one uvicorn process, no `--workers` flag), but a
+  second replica would track its own separate counts, silently defeating
+  both the moment this runs behind a load balancer with more than one
+  instance (see Horizontal scaling below).
+- **Request body size cap** (`MAX_REQUEST_BODY_BYTES`, default 256KB,
+  checked via `Content-Length` before the body is read) — every real
+  payload here is under 1KB; this closes the "no size limits" gap this
+  section used to name.
+- **Security headers on every response**: `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, and a `Content-Security-Policy` (locked to
+  `default-src 'none'` on the JSON API, a scoped policy allowing exactly
+  Swagger/ReDoc's CDN assets on `/docs`/`/redoc`, and a separate policy on
+  the frontend's nginx covering Google Fonts + HTTPS API calls — see
+  `frontend/nginx.conf`).
+- **`debug=False` explicitly set**, plus a catch-all exception handler
+  that logs the real traceback server-side and returns a generic message
+  to the client — an unhandled exception was already safe by Starlette's
+  own default, this makes that an explicit, visible decision in the code
+  rather than an implicit default a reviewer has to go verify.
+- **Both containers run as non-root.** The backend adds a dedicated
+  `appuser` (uid 1000); the frontend switched from `nginx:alpine` to
+  `nginxinc/nginx-unprivileged:alpine`, which runs nginx as non-root on
+  port 8080 by design (see `frontend/nginx.conf` and `docker-compose.yml`'s
+  frontend port mapping) rather than needing root just to bind port 80.
+  **Found live, not assumed**: the first pass of this change broke
+  `/predict` outright (`sqlite3.OperationalError: attempt to write a
+  readonly database`) -- `docker-compose.yml`'s bind mount overlays
+  `./data` onto `/app/data` at container *start*, after the image's own
+  build-time `chown`, so a DB file created by an earlier root-run
+  container (or a fresh directory Docker itself creates owned by root)
+  arrived owned by root regardless of what the Dockerfile set up.
+  Fixed with `docker-entrypoint.sh`: the backend container still starts
+  as root (same as the plain image default), but only to
+  `chown -R appuser:appuser /app/data` against whatever actually landed
+  in the mount, then drop to `appuser` via `gosu` before the real
+  `uvicorn` process ever starts -- the long-running server still ends up
+  non-root either way, this only moves *when* the switch happens.
+  Verified live after the fix: `docker exec ... whoami` still shows root
+  for a *new* exec session (expected -- that's a separate process, not
+  the entrypoint's chain), but `docker top` confirms the actual `uvicorn`
+  process runs under uid 1000, and a real `POST /predict` succeeds (201,
+  row written) against the bind-mounted DB. The `chown` on every
+  container start also measurably slowed cold-start time (~30-55s
+  observed against the 162MB+ `features.csv` + DB, up from the original
+  ~15s), so the healthcheck's `start_period` was widened to 60s to match
+  what was actually observed rather than the old, now-too-tight value.
+- **Dependency scan** (`pip-audit`, `npm audit`): zero HIGH/CRITICAL
+  findings in any actual application dependency. `pip-audit` flagged 3
+  known CVEs in the base image's bundled **pip** itself (not an app
+  dependency — pip is a build-time tool, never imported by the running
+  app), fixed by upgrading pip in the `Dockerfile` before installing
+  requirements. `npm audit` on the frontend: zero findings at any
+  severity.
+- **SQL injection**: audited directly, not assumed — every database call
+  in this codebase (`grep`-verified across `api/` and `src/`) goes through
+  SQLAlchemy's `select()`/ORM layer; the only raw `text(...)` calls are
+  two static, literal DDL/health-check strings (`"SELECT 1"`, one
+  migration `ALTER TABLE`) with zero interpolated user input anywhere.
+- **CORS**: was already environment-driven with no wildcard before this
+  pass (see Environment variables above) — confirmed, not changed. What's
+  new is the explicit README callout that the default value is
+  local-dev-only and must be replaced with the real production frontend
+  origin at deploy time; this project doesn't have a chosen hosting
+  target yet, so that origin can't be filled in here without inventing one.
+- **The demo-reset "endpoint" is not an HTTP endpoint at all.**
+  `scripts/reset_demo_data.py` (see Demo walkthrough) clears and reseeds
+  the predictions/alerts/chargebacks/refunds tables, but it does so by
+  importing this project's own services and talking to the SQLite file
+  directly — there is no `POST /api/v1/...reset` route anywhere in
+  `api/routes/` (see API endpoint reference: every route is either a
+  `GET` or one of the three rate-limited `POST`s above, none of them
+  destructive in this sense). A shared-secret header on a reset *route*
+  therefore isn't applicable here, because no such route exists to guard
+  — and the actual protection this gives is stronger than an
+  admin-token-gated HTTP endpoint would be: reaching it at all requires
+  running the script with a real shell on the machine (or in the
+  container) that also has the SQLite file on disk, not just network
+  access to a published port. Nothing in this codebase exposes it over
+  HTTP, and this pass did not add one — turning it into a network-reachable
+  admin endpoint would be a new capability, not a hardening fix to an
+  existing one, and wasn't asked for independent of this misconception
+  about what already existed.
 
 **Horizontal scaling.** Run multiple API replicas behind a load balancer
 (any of: a managed load balancer, nginx/Envoy, or a Kubernetes Service).
@@ -618,8 +700,27 @@ cost at the actual traffic level.
 **Other real gaps this project states rather than papers over**, in
 addition to the ones already named in Known Limitations above: no
 authentication or per-caller API keys today (anyone who can reach the
-port can call `/predict`); no request/response payload size limits beyond
-what FastAPI/Pydantic validate structurally; the model is loaded into
+port can call `/predict`, `/simulate`, or `/predict/return` -- rate-limited
+per IP, but not gated by identity) -- request body size *is* now capped
+(`MAX_REQUEST_BODY_BYTES`, see above), closing what this bullet used to
+name as a gap, but that cap is enforced by reading `Content-Length` before
+the body is read, which a request that lies about its own `Content-Length`
+(or streams via chunked transfer-encoding without one) can bypass -- a
+reverse proxy's own body-size limit (nginx's `client_max_body_size`, or
+the PaaS's edge limit) is the real backstop for that case, not yet
+configured since no reverse proxy sits in front of this app's actual
+deployment today; **no HTTPS/TLS is configured anywhere in this repo** --
+`docker-compose.yml` runs plain HTTP end to end, correct for local/
+Docker-Compose use but not deployable to the public internet as-is. TLS
+termination depends on which hosting target is actually chosen (a PaaS
+typically handles this automatically at its edge; a raw VM needs an
+explicit reverse proxy -- nginx or Caddy -- with a Let's Encrypt
+certificate); this project has not yet settled on a hosting target, so
+this is named as a blocking pre-deploy step rather than implemented
+speculatively against a guess; SQLite has no built-in network-level access
+control, only file permissions -- correct for this project's
+single-instance deployment, would need a real database with connection
+auth for multi-instance production use; the model is loaded into
 every process's own memory rather than served from a dedicated inference
 service, which is fine at this project's scale (the model file is ~600KB)
 but would be revisited if the model ever grew large enough that loading
@@ -627,6 +728,19 @@ it per-replica became the actual bottleneck; and structured request
 logging exists (`api/main.py`'s logging middleware) but there is no
 metrics/tracing pipeline (Prometheus + Grafana, or a hosted APM) wired up
 to actually alert on the kind of thing that middleware logs.
+
+**Honest bottom line.** This hardening pass closes the realistic, common
+attack surface for a public demo running behind whatever TLS termination
+the eventual host provides: parameterized queries throughout (audited,
+zero raw-SQL injection surface), no secrets in any image layer, non-root
+containers, security headers (including a CSP scoped to this app's actual
+resource origins), rate-limited write endpoints, a body-size cap, and a
+clean dependency scan (zero HIGH/CRITICAL findings in any application
+dependency). It is not a claim that this system is unhackable, and it
+does not substitute for the TLS + real per-caller auth work still gated
+on choosing a hosting target -- no system is perfectly secure against a
+sufficiently determined, resourced attacker, and this document says so
+rather than implying otherwise.
 
 ## Tech stack
 

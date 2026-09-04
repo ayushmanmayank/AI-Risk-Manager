@@ -1,3 +1,4 @@
+
 # Never let the licensed Kaggle dataset or the large regenerable
 # features file end up baked into an image layer, even by accident --
 # docker-compose.yml mounts the real data/ directory as a volume instead.
@@ -24,3 +25,11 @@ frontend/dist/
 *.md
 docs/
 tests/
+
+# Defense-in-depth: no .env exists in this repo today (see .gitignore),
+# but if one is ever created for local secrets, it must never end up in
+# an image layer even by accident -- the Dockerfile never COPYs it
+# either way, this is a second, independent guard against that.
+.env
+.env.*
+!.env.example

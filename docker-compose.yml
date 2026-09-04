@@ -18,7 +18,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      # 60s, not the original 15s -- widened after this hardening pass's
+      # non-root fix (docker-entrypoint.sh) added a real, measured
+      # increase to cold-start time: `chown -R appuser:appuser /app/data`
+      # runs on every container start against the bind-mounted data/
+      # directory (the 162MB+ features.csv included), and that chown plus
+      # the now-non-root file reads during model/feature loading pushed
+      # observed startup to ~30-55s on this Windows/Docker-Desktop
+      # environment -- found live (the 15s original start_period +
+      # 5x10s retries intermittently reported "unhealthy" and aborted
+      # `docker compose up` before startup actually finished), not a
+      # theoretical margin pick. 60s start_period + 5x10s retries gives
+      # real headroom over the worst case observed.
+      start_period: 60s
 
   frontend:
     build:
@@ -30,7 +42,11 @@ services:
         # published port -- never the Docker-internal hostname `backend`.
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      # Container-side 8080, not 80 -- frontend/Dockerfile now runs nginx
+      # unprivileged (non-root), which listens on 8080 by design (see
+      # nginx.conf). The host-facing port is unchanged: still
+      # FRONTEND_PORT (default 3000).
+      - "${FRONTEND_PORT:-3000}:8080"
     depends_on:
       backend:
         condition: service_healthy
