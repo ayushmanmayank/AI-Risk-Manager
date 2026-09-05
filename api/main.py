@@ -5,6 +5,7 @@ Run with:  uvicorn api.main:app --reload   (from the project root)
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
@@ -32,6 +33,7 @@ from api.routes import (
 from api.services.anomaly_service import anomaly_service
 from api.services.data_bootstrap import ensure_bundled_data_extracted
 from api.services.db import init_db
+from api.services.demo_seed import seed_demo_traffic_if_empty
 from api.services.drift_service import drift_service
 from api.services.model_info_service import model_info_service
 from api.services.model_service import model_service
@@ -122,6 +124,12 @@ async def lifespan(app: FastAPI):
         model_service.is_loaded,
         anomaly_service.baseline_fraud_rate * 100,
     )
+    # Fire-and-forget: scheduled here but doesn't actually run until the
+    # event loop regains control at/after `yield`, so this never delays
+    # the server coming up -- see demo_seed.py's own docstring for why it
+    # exists and why it's safe to run unattended (no-ops on a non-empty
+    # DB, and during pytest).
+    asyncio.create_task(seed_demo_traffic_if_empty())
     yield
 
 

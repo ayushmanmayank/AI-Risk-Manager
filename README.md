@@ -357,24 +357,33 @@ npm run dev
 
 A suggested tour, roughly in the order a judge would want to see the story.
 
-**Step 0, every time, before anything else:**
+**Step 0 happens automatically on first boot** — no command needed. The
+very first time the API starts against a genuinely empty predictions
+table, it seeds this same known-good baseline itself (see
+`api/services/demo_seed.py`): a small amount of traffic already on the
+Dashboard, the seeded chargeback mix ready for step 7, the Fraud Spike
+detector reading calm, and the full HIGH-risk row pool fresh for step 4.
+A judge who just starts the app and opens the UI sees this without
+running anything first.
+
+**To manually re-run step 0** — between rehearsals, after a `--spike` run
+has exhausted the HIGH-risk row pool used in step 4 below, or any time you
+want to return to that same known-good state from wherever the system
+currently is:
 
 ```bash
 python scripts/reset_demo_data.py
 ```
 
-One command, ~11-15s, takes the system from *any* state (fresh, mid-demo,
-a previous `--spike` run having exhausted the HIGH-risk row pool used in
-step 4 below, whatever) to a known-good starting point: a small amount of
-baseline traffic already on the Dashboard, the seeded chargeback mix ready
-for step 7, the Fraud Spike detector reading calm, and the full HIGH-risk
-row pool fresh again for step 4. See `docs/demo_script.md` for the full
-rehearsed script this backs; see the script's own docstring for exactly
-what it does and why.
+One command, ~11-15s, takes the system from *any* state back to that
+starting point (this is the exact same logic the automatic first-boot seed
+uses). See `docs/demo_script.md` for the full rehearsed script this backs;
+see the script's own docstring for exactly what it does and why.
 
 1. **Dashboard** (`/`) — total transactions scored so far, risk-tier
    distribution, decision breakdown. Already has a small amount of
-   baseline traffic from step 0 — populate it further with step 2.
+   baseline traffic from the automatic first-boot seed (or step 0 above)
+   — populate it further with step 2.
 
 2. **Generate live traffic.** In a separate terminal:
 

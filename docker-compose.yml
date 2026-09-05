@@ -14,6 +14,7 @@ services:
       - ./data:/app/data
     environment:
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}
+      - DISABLE_DEMO_AUTOSEED=${DISABLE_DEMO_AUTOSEED:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
       interval: 10s
