@@ -141,6 +141,39 @@ Two things worth understanding, not just copying:
 
 ## Dataset setup
 
+This project uses **two** datasets, and **neither is committed** (both are
+gitignored). The API reads files derived from *both* during startup, so a
+fresh clone with no data does not start in a degraded mode — it exits
+before binding the port. This section is not optional.
+
+### The fast path: one script
+
+Only one of the two datasets needs a manual download (Kaggle requires an
+account). Everything after that — fetching the second dataset, converting
+it, and building both feature tables — is automated:
+
+```bash
+# 1. Download creditcard.csv from Kaggle (free account required):
+#    https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
+#    and place it at data/raw/creditcard.csv
+# 2. Then:
+python scripts/setup_data.py
+```
+
+That script checks for the Kaggle file first (so a missing one fails in a
+second, not after a 45MB download), builds `features.csv`, downloads and
+converts UCI's Online Retail II, builds `return_features.csv`, and then
+verifies all five resulting files actually exist before reporting success.
+It's idempotent — existing outputs are skipped, so re-running after a
+failure resumes rather than repeating ~10 minutes of work. Pass `--force`
+to rebuild everything.
+
+The rest of this section explains what that script does step by step, and
+is worth reading if you want to run the stages individually or understand
+what each file is.
+
+### Step by step: the fraud dataset
+
 The dataset (Kaggle's [`mlg-ulb/creditcardfraud`](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud),
 284,807 transactions, 492 fraud, ~0.172% positive class) is not — and
 cannot be — committed to this repo: it requires a free Kaggle account to
@@ -180,11 +213,11 @@ curl -L -o online_retail_ii.zip "https://archive.ics.uci.edu/static/public/502/o
 
 1. Unzip it (produces `online_retail_II.xlsx`, two sheets: "Year 2009-2010"
    and "Year 2010-2011"), then concatenate both sheets into the single CSV
-   `build_return_features.py` expects — needs `pip install openpyxl` once,
-   just for this one-time conversion:
+   `build_return_features.py` expects. The Excel read needs `openpyxl`,
+   which is already in `requirements.txt` for exactly this one-time
+   conversion — no runtime code path imports it:
 
    ```bash
-   pip install openpyxl
    python -c "
    import pandas as pd
    df = pd.concat([
@@ -208,9 +241,14 @@ curl -L -o online_retail_ii.zip "https://archive.ics.uci.edu/static/public/502/o
    ```
 
    Writes `data/processed/return_features.csv` and
-   `return_features_products.csv` (both gitignored, regenerable). **Required
-   before `GET /api/v1/models/return` or `POST /api/v1/predict/return` will
-   work.**
+   `return_features_products.csv` (both gitignored, regenerable).
+   **Required before the API will start at all** — not merely before
+   `GET /api/v1/models/return` and `POST /api/v1/predict/return` return
+   useful answers. `return_features.csv` is read during FastAPI's startup
+   lifespan (`return_model_info_service.load()` in `api/main.py`), so
+   without it the process raises `FileNotFoundError` and exits *before*
+   binding the port — even with `features.csv` fully in place. Building
+   only the fraud dataset is not enough to get a running server.
 
 ## Model training (optional — reproducing from scratch)
 
@@ -251,9 +289,14 @@ printed to the console.
 
 ## Running the app
 
-> Make sure you've completed [Dataset setup](#dataset-setup) first — both
-> options below will start, but the backend will fail immediately without
-> `data/processed/features.csv` already in place.
+> Make sure you've completed [Dataset setup](#dataset-setup) first —
+> `python scripts/setup_data.py` covers all of it. Both options below fail
+> immediately without **both** `data/processed/features.csv` *and*
+> `data/processed/return_features.csv` already in place: each is read
+> during FastAPI's startup lifespan, so a missing one crashes the process
+> before it binds the port rather than degrading a single endpoint. Docker
+> is no exception — Compose bind-mounts `./data`, so it reads the same
+> files from your host.
 
 ### Docker
 

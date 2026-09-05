@@ -13,3 +13,10 @@ uvicorn[standard]>=0.29
 sqlalchemy>=2.0
 httpx>=0.27
 pydantic>=2.5
+
+# Read by scripts/setup_data.py only, for the one-time conversion of UCI's
+# Online Retail II .xlsx into the .csv build_return_features.py expects.
+# Pinned here rather than left as a "pip install this too" line in the
+# README so that a fresh clone's `pip install -r requirements.txt` is
+# genuinely sufficient to run setup -- no runtime code path imports it.
+openpyxl>=3.1
