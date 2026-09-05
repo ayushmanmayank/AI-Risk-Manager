@@ -141,6 +141,10 @@ export function Layout() {
       <span
         aria-hidden="true"
         className="font-display pointer-events-none fixed top-1/2 left-1/2 z-0 -translate-x-1/2 -translate-y-1/2 text-center text-[4rem] leading-tight font-bold tracking-wide whitespace-nowrap text-text-primary uppercase opacity-[0.06] select-none sm:text-[6rem] lg:text-[8rem]"
+        style={{
+          textShadow:
+            '0 0 40px color-mix(in srgb, var(--color-accent) 70%, transparent), 0 0 90px color-mix(in srgb, var(--color-accent) 40%, transparent)',
+        }}
       >
         AI Risk Manager
       </span>
