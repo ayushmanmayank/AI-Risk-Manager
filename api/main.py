@@ -10,6 +10,7 @@ import os
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,10 +43,72 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("fraud_api")
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# Derived feature tables the services below read at startup. Neither is
+# committed as plain CSV (both are gitignored: regenerable, and large) --
+# normally ensure_bundled_data_extracted() (called just above this, in
+# lifespan) already produced both from the committed data/processed/*.csv.gz
+# snapshots by the time this runs, so this is a safety net, not the primary
+# path: it only fires if those snapshots are themselves missing (e.g.
+# deliberately removed) and no one has run the raw-data build either.
+REQUIRED_DATA_FILES = (
+    (
+        PROJECT_ROOT / "data" / "processed" / "features.csv",
+        "python scripts/setup_datasets.py   (needs your own free Kaggle account for creditcard.csv)",
+    ),
+    (
+        PROJECT_ROOT / "data" / "processed" / "return_features.csv",
+        "python scripts/setup_datasets.py   (fully automatic -- UCI, no account needed)",
+    ),
+)
+
+
+def _preflight_data_check() -> None:
+    """Fail with the actual fix, not a bare FileNotFoundError.
+
+    Without this, a fresh clone's first `uvicorn api.main:app` dies deep
+    inside whichever service happened to read its CSV first -- the
+    traceback names a path under data/processed/ and nothing else, which
+    tells you a file is missing but not that it's *derived*, nor which
+    command derives it. That sent people looking for a file to download
+    into data/processed/, which is not how it gets there.
+
+    Purely a message-quality guard: it checks for existence and nothing
+    more, so a run where the files are present (the common case: either
+    extracted from the bundled snapshot or built from raw) reaches the
+    services in exactly the state it always did.
+    """
+    missing = [(path, how) for path, how in REQUIRED_DATA_FILES if not path.exists()]
+    if not missing:
+        return
+
+    lines = [
+        "Cannot start: required derived data file(s) are missing.",
+        "",
+        "These are normally extracted automatically from the committed",
+        "data/processed/*.csv.gz snapshots (see api/services/data_bootstrap.py) --",
+        "this only fires if those snapshots are themselves missing too, in which",
+        "case they must be built from the raw datasets instead:",
+        "",
+    ]
+    for path, how in missing:
+        lines.append(f"  missing: {path.relative_to(PROJECT_ROOT)}")
+        lines.append(f"     fix: {how}")
+        lines.append("")
+    lines.append("setup_datasets.py runs these build steps itself; they're the manual equivalent:")
+    lines.append("  python src/features/build_features.py")
+    lines.append("  python src/features/build_return_features.py")
+    lines.append("")
+    lines.append("Full walkthrough: README.md -> 'Dataset setup'")
+    raise RuntimeError("\n".join(lines))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Model and DB are initialized once per process, not per-request.
     ensure_bundled_data_extracted()
+    _preflight_data_check()
     init_db()
     model_service.load()
     anomaly_service.load()

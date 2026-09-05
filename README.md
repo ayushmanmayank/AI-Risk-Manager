@@ -156,31 +156,42 @@ end to end) rather than run against the bundled snapshot.
 
 ### The fast path: one script
 
-Neither raw dataset is committed (both are gitignored — too large and, for
-the fraud dataset, licensed behind a Kaggle account). Only one needs a
-manual download; everything after that — fetching the second dataset,
-converting it, and rebuilding both feature tables from scratch — is
-automated:
+Neither raw dataset is — or can be — committed to this repo (see each
+one's own note below for why), so a fresh clone's `data/raw/` is empty
+apart from a `.gitkeep`. **Fastest path**, handles both datasets, skips
+whichever one you already have:
 
 ```bash
-# 1. Download creditcard.csv from Kaggle (free account required):
-#    https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
-#    and place it at data/raw/creditcard.csv
-# 2. Then:
-python scripts/setup_data.py --force
+python scripts/setup_datasets.py
 ```
 
-`--force` is what you want here: without it, the script sees the
-snapshot-extracted `features.csv`/`return_features.csv` already on disk
-and skips rebuilding them. The script checks for the Kaggle file first (so
-a missing one fails in a second, not after a 45MB download), builds
-`features.csv`, downloads and converts UCI's Online Retail II, builds
-`return_features.csv`, and then verifies all five resulting files actually
-exist before reporting success.
+It also runs the two feature builders below for whichever datasets it
+managed to fetch, so this one command takes a fresh clone all the way to
+a startable API rather than stopping at the raw CSVs. It invokes those
+scripts unchanged and computes nothing itself, so the feature tables are
+identical to building them by hand. Re-run it freely: every step skips
+whatever is already in place — **including `features.csv`/`return_features.csv`
+themselves** (the script has no `--force`), so if those are already
+present from the bundled snapshot above and you actually want a genuine
+rebuild from freshly-fetched raw data, delete both first:
 
-The rest of this section explains what that script does step by step, and
-is worth reading if you want to run the stages individually or understand
-what each file is.
+```bash
+rm data/processed/features.csv data/processed/return_features.csv
+```
+
+What it actually does, honestly, per dataset:
+- **UCI Online Retail II** (CC BY 4.0, no account needed): downloads and
+  converts it fully automatically — nothing to configure.
+- **Kaggle's creditcard.csv** (requires *your own* free Kaggle account):
+  automates the download via Kaggle's own official API, using *your*
+  credentials — it cannot and does not bypass the account requirement.
+  If you don't have a Kaggle API token configured yet
+  (`~/.kaggle/kaggle.json`), the script says so plainly and prints the
+  manual steps below instead of failing silently.
+
+The rest of this section explains the manual steps it's automating —
+worth reading if you'd rather do them by hand, the script can't reach an
+API from your machine, or you want to understand what each file is.
 
 ### Step by step: the fraud dataset
 
@@ -215,7 +226,9 @@ The return-risk scorer trains on a **second, separate** dataset —
 [UCI's Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii)
 (1,067,371 real transaction-line rows from a UK-based online gift-ware
 retailer, Dec 2009–Dec 2011, CC BY 4.0). Unlike the fraud dataset, **no
-account or login is required** — it downloads directly:
+account or login is required** — `python scripts/setup_datasets.py`
+(above) handles this one fully automatically. The manual equivalent, if
+you'd rather do it by hand — it downloads directly:
 
 ```bash
 curl -L -o online_retail_ii.zip "https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip"
@@ -306,8 +319,8 @@ printed to the console.
 > Compose bind-mounts `./data`, so the container extracts them the same
 > way on its first run. Only if you've deliberately removed the `.csv.gz`
 > snapshots (or want data rebuilt from the original raw sources) would
-> startup fail here — in that case, run
-> `python scripts/setup_data.py --force` first.
+> startup fail here — in that case, run `python scripts/setup_datasets.py`
+> first (a startup check names the exact missing file either way).
 
 ### Docker
 

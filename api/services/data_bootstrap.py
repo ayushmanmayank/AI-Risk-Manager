@@ -2,18 +2,19 @@
 
 WHY THIS EXISTS: data/processed/*.csv are gitignored -- see .gitignore --
 because the full raw datasets are too large/licensed to commit (see
-scripts/setup_data.py). But the two processed files api/main.py's startup
-lifespan actually reads at runtime (features.csv, return_features.csv) are
-small enough gzip-compressed (71MB and <1MB) to check in directly as
+scripts/setup_datasets.py). But the two processed files api/main.py's
+startup lifespan actually reads at runtime (features.csv, return_features.csv)
+are small enough gzip-compressed (71MB and <1MB) to check in directly as
 data/processed/*.csv.gz. That means a fresh clone can run the API with NO
-setup step at all -- no Kaggle account, no setup_data.py -- which matters
-for anyone (e.g. judges) who just wants to start the app, not rebuild the
+setup step at all -- no Kaggle account, no script -- which matters for
+anyone (e.g. judges) who just wants to start the app, not rebuild the
 pipeline from raw sources.
 
-This only extracts what's missing; a real local rebuild (scripts/setup_data.py,
-or manually re-running the build_features scripts) always produces the plain
-.csv, which is what every reader already looks for, so the freshly-built
-data always wins -- the bundled snapshot is a fallback, never an override.
+This only extracts what's missing; a real local rebuild
+(scripts/setup_datasets.py, or manually re-running the build_features
+scripts) always produces the plain .csv, which is what every reader
+already looks for, so the freshly-built data always wins -- the bundled
+snapshot is a fallback, never an override.
 """
 
 from __future__ import annotations
