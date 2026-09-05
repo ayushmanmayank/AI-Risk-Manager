@@ -150,6 +150,13 @@ whichever one you already have:
 python scripts/setup_datasets.py
 ```
 
+It also runs the two feature builders below for whichever datasets it
+managed to fetch, so this one command takes a fresh clone all the way to
+a startable API rather than stopping at the raw CSVs. It invokes those
+scripts unchanged and computes nothing itself, so the feature tables are
+identical to building them by hand. Re-run it freely: every step skips
+whatever is already in place.
+
 What it actually does, honestly, per dataset:
 - **UCI Online Retail II** (CC BY 4.0, no account needed): downloads and
   converts it fully automatically — nothing to configure.

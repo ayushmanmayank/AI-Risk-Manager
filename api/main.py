@@ -10,6 +10,7 @@ import os
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,9 +42,64 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("fraud_api")
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# Derived feature tables the services below read at startup. Neither is
+# committed (both are gitignored: regenerable, and large), so on a fresh
+# clone they're simply absent until the setup steps have been run.
+REQUIRED_DATA_FILES = (
+    (
+        PROJECT_ROOT / "data" / "processed" / "features.csv",
+        "python scripts/setup_datasets.py   (needs your own free Kaggle account for creditcard.csv)",
+    ),
+    (
+        PROJECT_ROOT / "data" / "processed" / "return_features.csv",
+        "python scripts/setup_datasets.py   (fully automatic -- UCI, no account needed)",
+    ),
+)
+
+
+def _preflight_data_check() -> None:
+    """Fail with the actual fix, not a bare FileNotFoundError.
+
+    Without this, a fresh clone's first `uvicorn api.main:app` dies deep
+    inside whichever service happened to read its CSV first -- the
+    traceback names a path under data/processed/ and nothing else, which
+    tells you a file is missing but not that it's *derived*, nor which
+    command derives it. That sent people looking for a file to download
+    into data/processed/, which is not how it gets there.
+
+    Purely a message-quality guard: it checks for existence and nothing
+    more, so a run where the files are present reaches the services in
+    exactly the state it always did.
+    """
+    missing = [(path, how) for path, how in REQUIRED_DATA_FILES if not path.exists()]
+    if not missing:
+        return
+
+    lines = [
+        "Cannot start: required derived data file(s) are missing.",
+        "",
+        "These are built from the raw datasets, not shipped in the repo",
+        "(both are gitignored -- regenerable, and too large/licensed to commit):",
+        "",
+    ]
+    for path, how in missing:
+        lines.append(f"  missing: {path.relative_to(PROJECT_ROOT)}")
+        lines.append(f"     fix: {how}")
+        lines.append("")
+    lines.append("setup_datasets.py runs these build steps itself; they're the manual equivalent:")
+    lines.append("  python src/features/build_features.py")
+    lines.append("  python src/features/build_return_features.py")
+    lines.append("")
+    lines.append("Full walkthrough: README.md -> 'Dataset setup'")
+    raise RuntimeError("\n".join(lines))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Model and DB are initialized once per process, not per-request.
+    _preflight_data_check()
     init_db()
     model_service.load()
     anomaly_service.load()

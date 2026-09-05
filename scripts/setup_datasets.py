@@ -35,6 +35,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
+PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 
 CREDITCARD_PATH = RAW_DIR / "creditcard.csv"
 ONLINE_RETAIL_PATH = RAW_DIR / "online_retail_ii.csv"
@@ -130,14 +131,60 @@ def setup_creditcard() -> None:
     print(f"[creditcard] done -- wrote {CREDITCARD_PATH}")
 
 
+def build_features() -> None:
+    """Run the repo's own feature builders for whichever raw datasets are
+    now present.
+
+    These are the exact scripts the README documents -- invoked unchanged,
+    as a subprocess, with no arguments and no reimplementation of what
+    they do. Nothing here computes a feature, and nothing here touches a
+    model: the builders remain the single source of truth for both, so
+    the tables produced are byte-for-byte what running them by hand
+    produces.
+
+    Chained here because printing "Next: run these two commands" and
+    stopping is the step people were missing -- the raw CSV lands, the
+    script exits 0 looking successful, and the API then fails at startup
+    on a *derived* file that setup never actually derived.
+    """
+    builders = (
+        (CREDITCARD_PATH, PROCESSED_DIR / "features.csv", "src/features/build_features.py"),
+        (ONLINE_RETAIL_PATH, PROCESSED_DIR / "return_features.csv", "src/features/build_return_features.py"),
+    )
+
+    for raw_path, built_path, script in builders:
+        if not raw_path.exists():
+            print(f"[build] skipping {script} -- its raw input ({raw_path.name}) isn't here yet.")
+            continue
+        if built_path.exists():
+            print(f"[build] {built_path.name} already present, skipping {script}.")
+            continue
+
+        print(f"[build] running {script} (this takes a minute on the full dataset)...")
+        result = subprocess.run([sys.executable, script], cwd=PROJECT_ROOT)
+        if result.returncode != 0:
+            sys.exit(f"[build] {script} failed (exit {result.returncode}) -- see its output above.")
+        print(f"[build] done -- wrote {built_path}")
+
+
 def main() -> None:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     setup_online_retail_ii()
     print()
     setup_creditcard()
     print()
-    print("Next: python src/features/build_features.py")
-    print("      python src/features/build_return_features.py")
+    build_features()
+    print()
+
+    still_missing = [p.name for p in (PROCESSED_DIR / "features.csv", PROCESSED_DIR / "return_features.csv") if not p.exists()]
+    if still_missing:
+        print(f"Setup incomplete -- still missing: {', '.join(still_missing)}.")
+        print("The API needs both before it will start; re-run this script once the")
+        print("raw dataset(s) noted above are in place.")
+    else:
+        print("Setup complete -- both feature tables are built. The API can start:")
+        print("  uvicorn api.main:app --reload")
 
 
 if __name__ == "__main__":
