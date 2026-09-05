@@ -7,10 +7,6 @@ export function formatPercent(count: number, total: number): string {
   return `${((count / total) * 100).toFixed(1)}%`;
 }
 
-export function formatProbability(value: number): string {
-  return `${(value * 100).toFixed(2)}%`;
-}
-
 export function formatTimestamp(value: string): string {
   return new Date(value).toLocaleString();
 }

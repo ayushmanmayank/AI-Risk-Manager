@@ -28,16 +28,19 @@
   --color-text-muted: #6b6e73;
 
   --color-accent: #b8860b;
-  --color-accent-amber: #c99a3e;
   --color-accent-rose: #e0607a;
 
   /* Animated-gradient canvas stops -- see the `body` rule below for the
      actual gradient/animation, kept as tokens here so the light-mode
-     block can swap them with everything else in one place. */
+     block can swap them with everything else in one place. The 14s cycle
+     moves through two distinct color phases, not just one hue repeated:
+     stop-1 is deep amber (echoes the accent gold), stop-3 is a deep navy
+     blue -- a deliberate complementary pairing so the background reads
+     as genuinely moving through two moods, not just pulsing one tint. */
   --gradient-stop-0: #0a0b0d;
   --gradient-stop-1: #1c1608;
   --gradient-stop-2: #0a0b0d;
-  --gradient-stop-3: #201804;
+  --gradient-stop-3: #0d1b2e;
   --gradient-stop-4: #0a0b0d;
 
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -63,12 +66,11 @@
   --color-text-secondary: #8b8f94;
   --color-text-muted: #6b6e73;
   --color-accent: #b8860b;
-  --color-accent-amber: #c99a3e;
   --color-accent-rose: #e0607a;
   --gradient-stop-0: #0a0b0d;
   --gradient-stop-1: #1c1608;
   --gradient-stop-2: #0a0b0d;
-  --gradient-stop-3: #201804;
+  --gradient-stop-3: #0d1b2e;
   --gradient-stop-4: #0a0b0d;
 }
 
@@ -86,21 +88,19 @@
   --color-text-secondary: #75663a;
   --color-text-muted: #8f8362;
   --color-accent: #b8860b;
-  --color-accent-amber: #8c6a1e;
   --color-accent-rose: #c04665;
   --gradient-stop-0: #fafaf8;
   --gradient-stop-1: #f3ecd6;
   --gradient-stop-2: #fafaf8;
-  --gradient-stop-3: #f5efda;
+  --gradient-stop-3: #e8eef7;
   --gradient-stop-4: #fafaf8;
 }
 
 /* HARD RULE: no bright/saturated yellow in light-mode text. Body text,
    labels, and data values use --color-text-primary/--color-text-secondary
-   only -- --color-accent/--color-accent-amber never carry small text in
-   light mode (see getLevelTextColor in theme/colors.ts, which enforces
-   this for every JS-resolved raw-hex color too, not just these
-   CSS-driven utilities). This is a deliberate, tested readability
+   only -- accent/accent-amber (the JS-side palette in theme/colors.ts,
+   resolved via getLevelColor/getLevelTextColor for badges/charts/rings)
+   never carry small text in light mode. This is a deliberate, tested readability
    decision. */
 
 body {
