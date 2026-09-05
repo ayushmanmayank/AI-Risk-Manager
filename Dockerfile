@@ -48,9 +48,11 @@ COPY models/ ./models/
 
 # Created empty here; docker-compose.yml's volume mount overlays the real
 # data/ directory (processed features + the persistent predictions.db)
-# over this at runtime. The API will fail to start if features.csv isn't
-# actually present at runtime -- see README.md's "Dataset setup" section,
-# which must be done before first run.
+# over this at runtime. No manual step needed before first run: the host
+# repo's data/processed/*.csv.gz snapshots ride along in the bind mount,
+# and api/services/data_bootstrap.py extracts them to features.csv /
+# return_features.csv on first startup if they're not already there --
+# see README.md's "Dataset setup" section.
 RUN mkdir -p data/processed data/raw
 
 # Dedicated non-root user, not the image default (root) -- standard
