@@ -133,7 +133,7 @@ export function Layout() {
     <div className="min-h-screen font-sans text-text-primary">
       <header className="sticky top-0 z-40 backdrop-blur-sm" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
         <div className="mx-auto w-full max-w-7xl px-8 py-4">
-          <span className="font-display text-base font-semibold tracking-tight text-text-primary">AI Risk Manager</span>
+          <span className="font-display text-xl font-bold tracking-wide text-text-primary uppercase">AI Risk Manager</span>
         </div>
         <div className="border-b border-border">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-8 py-2">
