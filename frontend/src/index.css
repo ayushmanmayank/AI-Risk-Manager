@@ -32,11 +32,15 @@
 
   /* Animated-gradient canvas stops -- see the `body` rule below for the
      actual gradient/animation, kept as tokens here so the light-mode
-     block can swap them with everything else in one place. */
+     block can swap them with everything else in one place. The 14s cycle
+     moves through two distinct color phases, not just one hue repeated:
+     stop-1 is deep amber (echoes the accent gold), stop-3 is a deep navy
+     blue -- a deliberate complementary pairing so the background reads
+     as genuinely moving through two moods, not just pulsing one tint. */
   --gradient-stop-0: #0a0b0d;
   --gradient-stop-1: #1c1608;
   --gradient-stop-2: #0a0b0d;
-  --gradient-stop-3: #201804;
+  --gradient-stop-3: #0d1b2e;
   --gradient-stop-4: #0a0b0d;
 
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -66,7 +70,7 @@
   --gradient-stop-0: #0a0b0d;
   --gradient-stop-1: #1c1608;
   --gradient-stop-2: #0a0b0d;
-  --gradient-stop-3: #201804;
+  --gradient-stop-3: #0d1b2e;
   --gradient-stop-4: #0a0b0d;
 }
 
@@ -88,7 +92,7 @@
   --gradient-stop-0: #fafaf8;
   --gradient-stop-1: #f3ecd6;
   --gradient-stop-2: #fafaf8;
-  --gradient-stop-3: #f5efda;
+  --gradient-stop-3: #e8eef7;
   --gradient-stop-4: #fafaf8;
 }
 
