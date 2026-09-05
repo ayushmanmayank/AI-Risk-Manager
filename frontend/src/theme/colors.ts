@@ -191,23 +191,6 @@ export function getRiskTierColor(mode: ThemeMode): Record<RiskTier, string> {
   };
 }
 
-export function getSeverityColor(mode: ThemeMode): Record<AlertSeverity, string> {
-  return {
-    NONE: getLevelColor(mode, SEVERITY_LEVEL.NONE),
-    LOW: getLevelColor(mode, SEVERITY_LEVEL.LOW),
-    MEDIUM: getLevelColor(mode, SEVERITY_LEVEL.MEDIUM),
-    HIGH: getLevelColor(mode, SEVERITY_LEVEL.HIGH),
-  };
-}
-
-export function getDriftStatusColor(mode: ThemeMode): Record<DriftStatus, string> {
-  return {
-    STABLE: getLevelColor(mode, DRIFT_STATUS_LEVEL.STABLE),
-    MODERATE_DRIFT: getLevelColor(mode, DRIFT_STATUS_LEVEL.MODERATE_DRIFT),
-    SIGNIFICANT_DRIFT: getLevelColor(mode, DRIFT_STATUS_LEVEL.SIGNIFICANT_DRIFT),
-  };
-}
-
 /** Precision/recall (Threshold Simulator): precision (the page's
  * "headline" metric) gets the reserved accent; recall stays neutral
  * (textSecondary) -- differentiated further by line style (solid vs.
