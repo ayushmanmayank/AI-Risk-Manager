@@ -56,3 +56,17 @@ class HealthOut(BaseModel):
     model_loaded: bool
     db_reachable: bool
     model_version: str
+    # Absolute filesystem paths of the code/DB THIS process is actually
+    # running against -- exists specifically to make a stale/duplicate
+    # backend process instantly diagnosable. Found live: a leftover
+    # process launched from an old, since-relocated (e.g. into macOS
+    # Trash) copy of this repo kept answering on the same port with its
+    # own separate, empty predictions.db, while the frontend and a
+    # freshly restarted "correct" backend both pointed at the current
+    # checkout -- from the outside this looked identical to "the app is
+    # broken / has no data," and the only way to tell them apart was
+    # noticing two different processes existed at all. Checking this
+    # endpoint answers "which copy of the code is actually serving this
+    # port" in one request instead of a process-of-elimination hunt.
+    project_root: str
+    db_path: str

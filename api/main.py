@@ -32,7 +32,7 @@ from api.routes import (
 )
 from api.services.anomaly_service import anomaly_service
 from api.services.data_bootstrap import ensure_bundled_data_extracted
-from api.services.db import init_db
+from api.services.db import DB_PATH, init_db
 from api.services.demo_seed import seed_demo_traffic_if_empty
 from api.services.drift_service import drift_service
 from api.services.model_info_service import model_info_service
@@ -120,9 +120,11 @@ async def lifespan(app: FastAPI):
     return_model_info_service.load()
     drift_service.load()
     logger.info(
-        "startup complete model_loaded=%s baseline_fraud_rate=%.4f%%",
+        "startup complete model_loaded=%s baseline_fraud_rate=%.4f%% project_root=%s db_path=%s",
         model_service.is_loaded,
         anomaly_service.baseline_fraud_rate * 100,
+        PROJECT_ROOT,
+        DB_PATH,
     )
     # Fire-and-forget: scheduled here but doesn't actually run until the
     # event loop regains control at/after `yield`, so this never delays

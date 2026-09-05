@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from api.schemas.prediction import HealthOut
-from api.services.db import get_db
+from api.services.db import DB_PATH, PROJECT_ROOT, get_db
 from api.services.model_service import MODEL_VERSION, model_service
 
 router = APIRouter()
@@ -27,4 +27,10 @@ def health(db: Session = Depends(get_db)) -> HealthOut:
         model_loaded=model_loaded,
         db_reachable=db_reachable,
         model_version=MODEL_VERSION,
+        # See HealthOut's own docstring comment: lets "why is the
+        # dashboard empty" be answered by checking THIS instead of
+        # guessing whether some other, stale process is the one actually
+        # answering on this port.
+        project_root=str(PROJECT_ROOT),
+        db_path=str(DB_PATH),
     )

@@ -353,6 +353,20 @@ npm run dev
 - API: `http://localhost:8000`
 - Web app: `http://localhost:5173` (Vite's default dev port)
 
+> **Dashboard/High-Risk Transactions showing nothing, even after
+> auto-seed should have populated them?** Before assuming the app is
+> broken, check `GET /api/v1/health` — its `project_root` and `db_path`
+> fields name the exact copy of the code and the exact database file the
+> process answering your requests is actually using. Found live: a
+> leftover backend process launched from an old, since-moved copy of this
+> repo (e.g. one dragged to the Trash/Recycle Bin but never actually
+> killed) can keep running and keep answering on the same port, with its
+> own separate, empty `predictions.db` — from the browser this looks
+> identical to "the app has a bug," and the only way to tell them apart
+> is checking which process is actually listening. If `project_root`
+> doesn't match the folder you expect, that's the entire bug: kill that
+> stray process and restart the backend from the correct checkout.
+
 ## Demo walkthrough
 
 A suggested tour, roughly in the order a judge would want to see the story.
