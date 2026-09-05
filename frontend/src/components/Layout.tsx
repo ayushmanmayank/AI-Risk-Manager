@@ -131,6 +131,19 @@ function NavRow() {
 export function Layout() {
   return (
     <div className="min-h-screen font-sans text-text-primary">
+      {/* Full-screen watermark: a giant, faint copy of the wordmark
+          centered on the viewport, behind every page's content. Fixed
+          (not absolute) so it stays centered on-screen regardless of
+          scroll position, sitting below the header (z-40) and below
+          <main>'s own content but above the body's animated gradient.
+          Purely decorative -- aria-hidden, no pointer events, clipped by
+          the viewport itself so it never creates horizontal scroll. */}
+      <span
+        aria-hidden="true"
+        className="font-display pointer-events-none fixed top-1/2 left-1/2 z-0 -translate-x-1/2 -translate-y-1/2 text-center text-[4rem] leading-tight font-bold tracking-wide whitespace-nowrap text-text-primary uppercase opacity-[0.06] select-none sm:text-[6rem] lg:text-[8rem]"
+      >
+        AI Risk Manager
+      </span>
       <header className="sticky top-0 z-40 backdrop-blur-sm" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
         <div className="mx-auto w-full max-w-7xl px-8 py-4">
           <span className="font-display text-xl font-bold tracking-wide text-text-primary uppercase">AI Risk Manager</span>
@@ -142,7 +155,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="min-w-0 overflow-x-auto px-8 py-8">
+      <main className="relative z-10 min-w-0 overflow-x-auto px-8 py-8">
         <div className="mx-auto w-full max-w-7xl">
           <Outlet />
         </div>
