@@ -4,6 +4,13 @@ data/raw/*.csv
 # Derived features -- 160MB+, fully regenerable via
 # src/features/build_features.py from data/raw/creditcard.csv. Never
 # commit this; it would blow past GitHub's 100MB file limit anyway.
+#
+# NOTE: data/processed/features.csv.gz and return_features.csv.gz are
+# intentionally NOT covered by this pattern (different suffix) and ARE
+# committed -- gzip-compressed snapshots small enough (71MB, <1MB) to fit
+# under GitHub's limit, extracted automatically on API startup by
+# api/services/data_bootstrap.py so a fresh clone runs with zero setup.
+# See that module's docstring for the full rationale.
 data/processed/*.csv
 
 # Python artifacts

@@ -29,6 +29,7 @@ from api.routes import (
     transactions,
 )
 from api.services.anomaly_service import anomaly_service
+from api.services.data_bootstrap import ensure_bundled_data_extracted
 from api.services.db import init_db
 from api.services.drift_service import drift_service
 from api.services.model_info_service import model_info_service
@@ -44,6 +45,7 @@ logger = logging.getLogger("fraud_api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Model and DB are initialized once per process, not per-request.
+    ensure_bundled_data_extracted()
     init_db()
     model_service.load()
     anomaly_service.load()

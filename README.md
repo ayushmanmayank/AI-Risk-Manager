@@ -141,32 +141,42 @@ Two things worth understanding, not just copying:
 
 ## Dataset setup
 
-This project uses **two** datasets, and **neither is committed** (both are
-gitignored). The API reads files derived from *both* during startup, so a
-fresh clone with no data does not start in a degraded mode — it exits
-before binding the port. This section is not optional.
+**Nothing to do here for a normal run.** The two files the API actually
+reads at startup (`data/processed/features.csv` and `return_features.csv`)
+ship in this repo as gzip-compressed snapshots
+(`data/processed/*.csv.gz`, 71MB and <1MB — small enough to fit under
+GitHub's 100MB file limit) and are extracted automatically the first time
+the API starts, by `api/services/data_bootstrap.py`. Clone the repo,
+follow [Running the app](#running-the-app), and it works — no Kaggle
+account, no download, no script.
+
+This section only matters if you want to **rebuild the data from the
+original raw sources** (e.g. to retrain the models, or verify the pipeline
+end to end) rather than run against the bundled snapshot.
 
 ### The fast path: one script
 
-Only one of the two datasets needs a manual download (Kaggle requires an
-account). Everything after that — fetching the second dataset, converting
-it, and building both feature tables — is automated:
+Neither raw dataset is committed (both are gitignored — too large and, for
+the fraud dataset, licensed behind a Kaggle account). Only one needs a
+manual download; everything after that — fetching the second dataset,
+converting it, and rebuilding both feature tables from scratch — is
+automated:
 
 ```bash
 # 1. Download creditcard.csv from Kaggle (free account required):
 #    https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 #    and place it at data/raw/creditcard.csv
 # 2. Then:
-python scripts/setup_data.py
+python scripts/setup_data.py --force
 ```
 
-That script checks for the Kaggle file first (so a missing one fails in a
-second, not after a 45MB download), builds `features.csv`, downloads and
-converts UCI's Online Retail II, builds `return_features.csv`, and then
-verifies all five resulting files actually exist before reporting success.
-It's idempotent — existing outputs are skipped, so re-running after a
-failure resumes rather than repeating ~10 minutes of work. Pass `--force`
-to rebuild everything.
+`--force` is what you want here: without it, the script sees the
+snapshot-extracted `features.csv`/`return_features.csv` already on disk
+and skips rebuilding them. The script checks for the Kaggle file first (so
+a missing one fails in a second, not after a 45MB download), builds
+`features.csv`, downloads and converts UCI's Online Retail II, builds
+`return_features.csv`, and then verifies all five resulting files actually
+exist before reporting success.
 
 The rest of this section explains what that script does step by step, and
 is worth reading if you want to run the stages individually or understand
@@ -289,14 +299,15 @@ printed to the console.
 
 ## Running the app
 
-> Make sure you've completed [Dataset setup](#dataset-setup) first —
-> `python scripts/setup_data.py` covers all of it. Both options below fail
-> immediately without **both** `data/processed/features.csv` *and*
-> `data/processed/return_features.csv` already in place: each is read
-> during FastAPI's startup lifespan, so a missing one crashes the process
-> before it binds the port rather than degrading a single endpoint. Docker
-> is no exception — Compose bind-mounts `./data`, so it reads the same
-> files from your host.
+> No manual step needed — see [Dataset setup](#dataset-setup). The two
+> files each option below needs (`data/processed/features.csv` and
+> `return_features.csv`) are extracted automatically on first startup from
+> the gzip snapshots checked into this repo. Docker is no exception —
+> Compose bind-mounts `./data`, so the container extracts them the same
+> way on its first run. Only if you've deliberately removed the `.csv.gz`
+> snapshots (or want data rebuilt from the original raw sources) would
+> startup fail here — in that case, run
+> `python scripts/setup_data.py --force` first.
 
 ### Docker
 
